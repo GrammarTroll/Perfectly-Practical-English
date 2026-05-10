@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Schedule</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #b3d9ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    margin: 0;
+    margin-top: 25px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 4px 0;
+  }
+
+  .schedule-wrapper {
+    background: #fff;
+    border-radius: 8px;
+    padding: 4px;
+    margin-top: 15px;
+    max-width: 357px;
+    overflow-x: auto;
+    height: 280px;
+    overflow-y: auto;
+  }
+
+  table {
+    border-collapse: collapse;
+    font-size: 12px;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+    text-align: center;
+    height: 14.25px;
+    padding: 4px 2px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  th:first-child, td:first-child { width: 22px; min-width: 22px; }
+  th:nth-child(2), td:nth-child(2) { width: 36px; min-width: 36px; }
+  th:nth-child(3), td:nth-child(3) { width: 36px; min-width: 36px; }
+  th:nth-child(n+4), td:nth-child(n+4) { width: 36px; min-width: 36px; }
+
+  th {
+    background-color: #ddd;
+    font-weight: bold;
+  }
+
+  /* Subject colors */
+  .c111 { background-color: #d9f0ff; }
+  .c122 { background-color: #dcedc8; }
+  .c133 { background-color: #ffe0e0; }
+  .c151 { background-color: #e0e0ff; }
+  .c172 { background-color: #f0d9ff; }
+  .cgreen { background-color: #ccffcc; }
+
+  footer {
+    font-size: 12px;
+    text-align: center;
+    color: #555;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Weekly Schedule</h1>
+
+<div class="schedule-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th>Per.</th>
+        <th>Time</th>
+        <th>24H</th>
+        <th>Mon</th>
+        <th>Tue</th>
+        <th>Wed</th>
+        <th>Thu</th>
+        <th>Fri</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>8:10</td><td>8:10</td><td class="c172">17.2</td><td class="c111">11.1</td><td></td><td></td><td class="c122">12.2</td></tr>
+      <tr><td>2</td><td>8:40</td><td>8:40</td><td class="c172">17.2</td><td class="c111">11.1</td><td></td><td></td><td class="c122">12.2</td></tr>
+      <tr><td></td><td>9:30</td><td>9:30</td><td class="cgreen"></td><td class="cgreen"></td><td class="cgreen"></td><td class="cgreen"></td><td class="cgreen"></td></tr>
+      <tr><td>3</td><td>10:10</td><td>10:10</td><td class="c111">11.1</td><td></td><td class="c133">13.3</td><td class="c172">17.2</td><td class="c111">11.1</td></tr>
+      <tr><td>4</td><td>10:50</td><td>10:50</td><td></td><td></td><td class="c133">13.3</td><td class="c133">13.3</td><td class="c111">11.1</td></tr>
+      <tr><td>5</td><td>11:30</td><td>11:30</td><td></td><td class="c151">15.1</td><td></td><td class="c133">13.3</td><td></td></tr>
+      <tr><td></td><td>12:10</td><td>12:10</td><td class="cgreen"></td><td class="cgreen"></td><td class="cgreen"></td><td class="cgreen"></td><td class="cgreen"></td></tr>
+      <tr><td>6</td><td>13:00</td><td>13:00</td><td class="c151">15.1</td><td></td><td class="c151">15.1</td><td class="c151">15.1</td><td></td></tr>
+      <tr><td>7</td><td>13:40</td><td>13:40</td><td class="c151">15.1</td><td class="c172">17.2</td><td class="c122">12.2</td><td></td><td></td></tr>
+      <tr><td>8</td><td>14:20</td><td>14:20</td><td class="c133">13.3</td><td class="c172">17.2</td><td class="c122">12.2</td><td class="c122">12.2</td><td></td></tr>
+      <tr><td></td><td>15:00</td><td>15:00</td><td></td><td></td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  <p>&copy; 2025 David Lee Cherry</p>
+</footer>
+
+<script>
+  const borderDiv = document.createElement('div');
+  borderDiv.style.position = 'fixed';
+  borderDiv.style.inset = '0';
+  borderDiv.style.border = '10px solid #39FF14';
+  borderDiv.style.boxSizing = 'border-box';
+  borderDiv.style.zIndex = '9999';
+  borderDiv.style.pointerEvents = 'none';
+  borderDiv.style.backgroundColor = 'transparent';
+  document.body.appendChild(borderDiv);
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // Get filename only
+    let filename = window.location.pathname.split("/").pop();
+
+    // Remove .html
+    filename = filename.replace(/\.html$/i, "");
+
+    // Remove everything up to and including the first underscore
+    // (treats that as the prefix)
+    filename = filename.replace(/^[^_]*_/, "");
+
+    // Convert underscores to spaces
+    const title = filename.replace(/_/g, " ");
+
+    // Replace the first <h1>
+    const h1 = document.querySelector("h1");
+    if (h1) {
+        h1.textContent = title;
+    }
+});
+</script>
+
+<script>
+(function() {
+  // Prevent pinch-to-zoom
+  function preventPinch(e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }
+
+  // Prevent double-tap zoom
+  let lastTouchTime = 0;
+  function preventDoubleTap(e) {
+    const now = Date.now();
+    if (now - lastTouchTime < 300) {
+      e.preventDefault();
+    }
+    lastTouchTime = now;
+  }
+
+  // Block gesture events on iOS
+  function preventGesture(e) {
+    e.preventDefault();
+  }
+
+  document.addEventListener('touchstart', preventPinch, { passive: false });
+  document.addEventListener('touchend', preventDoubleTap, { passive: false });
+  document.addEventListener('gesturestart', preventGesture, { passive: false });
+})();
+</script>
+
+</body>
+</html>
