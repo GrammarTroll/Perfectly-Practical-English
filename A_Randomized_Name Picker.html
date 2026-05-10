@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Name Queue</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f3f4f6;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.top-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+select, button {
+  height: 38px;
+  font-size: 14px;
+}
+
+select {
+  flex: 1;
+  min-width: 0;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tile {
+  height: 60px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  color: #111;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="top-bar">
+    <select id="classSelect"></select>
+    <button id="loadBtn">Load</button>
+  </div>
+
+  <div class="column" id="lane"></div>
+
+</div>
+
+<script>
+
+/* =========================
+   RAW DATA
+========================= */
+
+const RAW_TEXT = `
+~11.1
+Blue	Noah
+Blue	Luca
+Blue	Oscar
+Green	Theo
+Green	Archie
+Green	Arlo
+Orange	Freddie
+Orange	Arthur
+Orange	George
+Red	Leo
+Red	Oliver
+Red	Alfie
+
+~12.1
+Blue	Charlie
+Blue	Teddy
+Blue	Lucas
+Green	Elijah
+Green	Albie
+Green	Harry
+Orange	Jude
+Orange	Reggie
+Orange	Jack
+Red	Henry
+Red	Oakley
+Red	Tommy
+
+~13.1
+Blue	Roman
+Blue	Ezra
+Blue	Reuben
+Green	Rory
+Green	Isaac
+Green	Jacob
+Orange	Finley
+Orange	Rowan
+Orange	Hudson
+Red	Theodore
+Red	Ronnie
+Red	Ethan
+
+~14.1
+Blue	Louie
+Blue	James
+Blue	Kai
+Green	Max
+Green	Alexander
+Green	Adam
+Orange	Vinnie
+Orange	Hugo
+Orange	Mason
+Red	Thomas
+Red	Sonny
+Red	Frankie
+
+~15.1
+Blue	Hunter
+Blue	Miles
+Blue	Edward
+Green	Harrison
+Green	Yusuf
+Green	Jaxon
+Orange	Logan
+Orange	Louis
+Orange	Nathan
+Red	Finn
+Red	Riley
+Red	Musa
+`;
+
+/* =========================
+   PARSER (FULLY DYNAMIC)
+========================= */
+
+function parseData(raw) {
+  const blocks = raw.split(/(?=~)/g);
+
+  const result = {};
+
+  for (let block of blocks) {
+    block = block.trim();
+    if (!block.startsWith("~")) continue;
+
+    const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
+    const className = lines[0].replace("~", "").trim();
+
+    const classObj = {
+      teams: {},      // teamName -> array
+      order: []       // preserve first-seen order
+    };
+
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(/\s+/);
+      if (parts.length < 2) continue;
+
+      const team = parts[0];
+      const name = parts.slice(1).join(" ");
+
+      if (!classObj.teams[team]) {
+        classObj.teams[team] = [];
+        classObj.order.push(team);
+      }
+
+      classObj.teams[team].push(name);
+    }
+
+    result[className] = classObj;
+  }
+
+  return result;
+}
+
+const classData = parseData(RAW_TEXT);
+
+/* =========================
+   UI SETUP
+========================= */
+
+const select = document.getElementById("classSelect");
+
+const placeholder = document.createElement("option");
+placeholder.value = "";
+placeholder.textContent = "Select a class…";
+placeholder.selected = true;
+placeholder.disabled = true;
+select.appendChild(placeholder);
+
+Object.keys(classData).forEach(cls => {
+  const opt = document.createElement("option");
+  opt.value = cls;
+  opt.textContent = cls;
+  select.appendChild(opt);
+});
+
+/* =========================
+   STATE
+========================= */
+
+let queues = {};
+let currentTiles = [];
+let teamOrder = [];
+
+/* =========================
+   LOAD CLASS
+========================= */
+
+document.getElementById("loadBtn").onclick = () => {
+  const cls = select.value;
+  if (!cls || !classData[cls]) return;
+
+  const data = classData[cls];
+
+  queues = {};
+  teamOrder = data.order;
+
+  teamOrder.forEach(team => {
+    queues[team] = [...data.teams[team]];
+  });
+
+  buildTiles();
+};
+
+/* =========================
+   ROTATION PER TEAM
+========================= */
+
+function next(team) {
+  const q = queues[team];
+  if (!q || q.length === 0) return "—";
+  const val = q.shift();
+  q.push(val);
+  return val;
+}
+
+/* =========================
+   BUILD DYNAMIC COLUMN
+========================= */
+
+function buildTiles() {
+  currentTiles = teamOrder.map(team => ({
+    team,
+    name: next(team)
+  }));
+
+  render();
+}
+
+/* =========================
+   RENDER
+========================= */
+
+function render() {
+  const lane = document.getElementById("lane");
+  lane.innerHTML = "";
+
+  currentTiles.forEach((t, i) => {
+    const div = document.createElement("div");
+    div.className = "tile";
+    div.style.background = colorFor(t.team);
+    div.textContent = t.name;
+
+    if (i === 0) {
+      div.onclick = rotate;
+    }
+
+    lane.appendChild(div);
+  });
+}
+
+/* =========================
+   SIMPLE COLOR HASH
+========================= */
+
+function colorFor(team) {
+  const colors = [
+    "#4da3ff",
+    "#3ddc84",
+    "#ffa94d",
+    "#ff5c5c",
+    "#c084fc",
+    "#f472b6",
+    "#34d399"
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < team.length; i++) {
+    hash = team.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+}
+
+/* =========================
+   ROTATE TOP TILE
+========================= */
+
+function rotate() {
+  const moved = currentTiles.shift();
+  moved.name = next(moved.team);
+  currentTiles.push(moved);
+  render();
+}
+
+</script>
+
+</body>
+</html>
