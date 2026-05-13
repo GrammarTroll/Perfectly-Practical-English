@@ -2113,84 +2113,45 @@ window.addEventListener("resize", adjustBodyPadding);
 
 <script>
 const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ"; // (don’t hardcode real keys in public code long-term)
 
 async function sendScoreToSupabase(scoreLine) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/pipe_ingest`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Prefer": "return=minimal"
-      },
-      body: JSON.stringify({
-        raw_line: scoreLine
-      })
-    }
-  );
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/pipe_ingest`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({
+          raw_line: scoreLine
+        })
+      }
+    );
 
-  // production-safe: no logging, just return success/fail
-  return response.ok;
+    const text = await response.text();
+
+    // IMPORTANT: surface real Supabase errors
+    if (!response.ok) {
+      console.error("Supabase insert failed:", response.status, text);
+      return false;
+    }
+
+    console.log("Supabase insert success:", text);
+    return true;
+
+  } catch (err) {
+    console.error("Network/Fetch error:", err);
+    return false;
+  }
 }
 </script>
 
-<script>
-async function testSupabaseInsert() {
-  const response = await fetch(
-    "https://etwwriloppklhhkmswpr.supabase.co/rest/v1/pipe_ingest",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ raw_line: "test" })
-    }
-  );
 
-  const text = await response.text();
-  console.log("STATUS:", response.status);
-  console.log("RESPONSE:", text);
-}
-
-testSupabaseInsert();
-</script>
-
-<script>
-/* your existing Supabase config + game code ABOVE stays unchanged */
-
-
-/* ===============================
-   TEMP SUPABASE TEST (ADD THIS)
-=============================== */
-async function testSupabaseInsert() {
-  const response = await fetch(
-    "https://etwwriloppklhhkmswpr.supabase.co/rest/v1/pipe_ingest",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ raw_line: "test" })
-    }
-  );
-
-  const text = await response.text();
-
-  console.log("STATUS:", response.status);
-  console.log("RESPONSE:", text);
-}
-
-/* run once */
-testSupabaseInsert();
-</script>
 </body>
 </html>
 
