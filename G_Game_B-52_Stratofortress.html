@@ -2086,8 +2086,13 @@ window.addEventListener("resize", adjustBodyPadding);
   /* =========================
      SUPABASE CONFIG
      ========================= */
-  const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
+
+  const SUPABASE_URL =
+    "https://etwwriloppklhhkmswpr.supabase.co";
+
+  const SUPABASE_KEY =
+    "YOUR_KEY";
+
   const supabase = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
@@ -2096,16 +2101,70 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
   const MAX_COLS = 10;
 
   /* =========================
-     PIPE FUNCTION (FINAL VERSION)
+     ACCEPTED SCHEMAS
      ========================= */
+
+  const SCHEMAS = {
+
+    standard_v1: {
+      fields: 6
+    },
+
+    extended_v1: {
+      fields: 8
+    },
+
+    compact_v1: {
+      fields: 3
+    }
+
+  };
+
+  /* =========================
+     DETECT SCHEMA
+     ========================= */
+
+  function detectSchema(parts) {
+
+    for (const [name, schema] of Object.entries(SCHEMAS)) {
+
+      if (parts.length === schema.fields) {
+        return name;
+      }
+
+    }
+
+    return "unknown";
+  }
+
+  /* =========================
+     UNIVERSAL PIPE
+     ========================= */
+
   async function PIPE(pipeString) {
 
-    const parts = String(pipeString)
+    if (!pipeString || typeof pipeString !== "string") {
+      console.warn("Invalid pipe string");
+      return;
+    }
+
+    const parts = pipeString
       .split("|")
       .map(v => v?.trim() ?? "");
 
-    // fill up to 10 columns
+    const schema = detectSchema(parts);
+
+    if (schema === "unknown") {
+      console.warn("Unknown schema:", pipeString);
+      return;
+    }
+
     const row = {
+
+      schema_name: schema,
+
+      raw_string: pipeString,
+
       c1: parts[0] || null,
       c2: parts[1] || null,
       c3: parts[2] || null,
@@ -2117,66 +2176,31 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
       c9: parts[8] || null,
       c10: parts[9] || null,
 
-      source_page: location.pathname,
       field_count: parts.length,
+
+      source_page: location.pathname,
+
       created_at: new Date().toISOString()
     };
 
+    console.log("PIPE EXPORT:", row);
+
     const { error } = await supabase
-      .from("raw_pipe_ingest")   // MUST match your Supabase table name
+      .from("raw_pipe_ingest")
       .insert([row]);
 
     if (error) {
       console.error("❌ PIPE ERROR:", error);
     } else {
-      console.log("✅ PIPE SENT:", row);
+      console.log("✅ PIPE SENT");
     }
   }
 
   /* =========================
-     QUIZ → PIPE BUILDER
+     GLOBAL EXPORT
      ========================= */
-  function submitQuiz() {
 
-    const filename = document.getElementById("fileNameOutput")?.textContent || "";
-    const student_name = document.getElementById("userNameOutput")?.textContent || "";
-    const student_id = document.getElementById("userIdOutput")?.textContent || "";
-
-    const scoreText = document.getElementById("scoreOutput")?.textContent || "";
-    const match = scoreText.match(/(\d+)\/(\d+)\s+\(([\d.]+)%\)/);
-
-    const pipeString = [
-      filename,
-      student_name,
-      student_id,
-      match ? match[1] : "",
-      match ? match[2] : "",
-      match ? match[3] : "",
-      location.pathname,
-      new Date().toISOString()
-    ].join("|");
-
-    PIPE(pipeString);
-  }
-
-  /* =========================
-     AUTO HOOK
-     ========================= */
-  document.addEventListener("DOMContentLoaded", () => {
-
-    const btn = document.getElementById("submitBtn");
-
-    if (!btn) {
-      console.warn("⚠️ submitBtn not found");
-      return;
-    }
-
-    btn.addEventListener("click", () => {
-      setTimeout(submitQuiz, 300);
-    });
-
-    console.log("✅ PIPE SYSTEM ACTIVE");
-  });
+  window.PIPE = PIPE;
 
 })();
 </script>
