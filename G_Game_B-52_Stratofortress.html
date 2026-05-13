@@ -2112,35 +2112,56 @@ window.addEventListener("resize", adjustBodyPadding);
 </script>
 
 <script>
-async function sendRenderedScoreboardToSupabase() {
+(function () {
 
   const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
 
-  const el = document.getElementById("scoreboardContainer");
-  if (!el) return false;
+  async function sendScore() {
 
-  const cleaned = (el.innerText || "")
-    .replace(/\r/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    const el = document.getElementById("scoreboardContainer");
+    if (!el) return;
 
-  if (!cleaned) return false;
+    const text = (el.textContent || "").trim();
+    if (!text) return;
 
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/scoreboard_raw`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-    },
-    body: JSON.stringify({
-      payload: cleaned
-    })
+    await fetch(`${SUPABASE_URL}/rest/v1/scoreboard_raw`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Prefer": "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify({
+        id: "GLOBAL_SCOREBOARD",
+        payload: text
+      })
+    }).catch(err => {
+      console.error("Supabase send failed:", err);
+    });
+  }
+
+  // Auto-watch scoreboard and send when final text appears
+  const target = document.getElementById("scoreboardContainer");
+  if (!target) return;
+
+  const observer = new MutationObserver(() => {
+    const text = target.textContent?.trim();
+    if (text && text.includes("|")) {
+      sendScore();
+    }
   });
 
-  return res.ok;
-}
+  observer.observe(target, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
+
+  console.log("Supabase auto-score sender armed");
+
+})();
 </script>
 
 </body>
