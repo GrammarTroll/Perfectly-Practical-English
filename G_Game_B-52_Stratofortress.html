@@ -2160,11 +2160,24 @@ window.addEventListener("resize", adjustBodyPadding);
   const error = (...a) => console.error("[PIPE]", ...a);
 
   /* =========================================
+     SAFE HELPERS (NEW)
+     ========================================= */
+
+  const safeString = (v) =>
+    v === undefined || v === null ? null : String(v);
+
+  const safeTrim = (v) => {
+    const s = safeString(v);
+    return s ? s.trim() : null;
+  };
+
+  const safeISO = () => new Date().toISOString();
+
+  /* =========================================
      VALIDATOR
      ========================================= */
 
   function isScoreboardPipeString(str) {
-
     if (!str || typeof str !== "string") return false;
     if (!str.includes("|")) return false;
     if (str.length > 300) return false;
@@ -2184,7 +2197,7 @@ window.addEventListener("resize", adjustBodyPadding);
   }
 
   /* =========================================
-     ROW BUILDER
+     ROW BUILDER (HARDENED)
      ========================================= */
 
   function buildRow(pipeString) {
@@ -2192,20 +2205,36 @@ window.addEventListener("resize", adjustBodyPadding);
     const parts = pipeString.split("|").map(v => v.trim());
 
     const row = {
-      raw_string: pipeString,
+      raw_string: safeString(pipeString) || "",
       field_count: parts.length,
-      source_page: location.pathname,
-      created_at: new Date().toISOString()
+      source_page: location.pathname || "unknown",
+      created_at: safeISO()
     };
 
     for (let i = 0; i < MAX_COLS; i++) {
+      const val = parts[i];
+
       row["c" + (i + 1)] =
-        parts[i] !== undefined && parts[i] !== ""
-          ? parts[i]
+        val !== undefined && val !== ""
+          ? safeTrim(val)
           : null;
     }
 
     return row;
+  }
+
+  /* =========================================
+     CLEAN INSERT WRAPPER (NEW)
+     ========================================= */
+
+  function sanitizeForSupabase(row) {
+    const clean = {};
+
+    for (const [k, v] of Object.entries(row)) {
+      if (v !== undefined) clean[k] = v;
+    }
+
+    return clean;
   }
 
   /* =========================================
@@ -2236,21 +2265,21 @@ window.addEventListener("resize", adjustBodyPadding);
         return;
       }
 
-      const row = buildRow(pipeString);
+      const row = sanitizeForSupabase(buildRow(pipeString));
 
       log("INSERT ROW:", row);
 
-      const response = await supabase
+      const { data, error: err } = await supabase
         .from(TABLE_NAME)
         .insert([row])
         .select();
 
-      log("SUPABASE RESPONSE:", response);
-
-      if (response.error) {
-        error("INSERT FAILED:", response.error);
+      if (err) {
+        error("INSERT FAILED (DETAILS):", err);
         return;
       }
+
+      log("SUPABASE RESPONSE:", data);
 
       lastExportedPipe = pipeString;
 
@@ -2272,18 +2301,15 @@ window.addEventListener("resize", adjustBodyPadding);
       log("HUNT STARTED");
 
       const targets = [
-
-        "#scoreboardContainer",  // ✅ FIXED (your real DOM)
+        "#scoreboardContainer",
         "#scoreboard",
         "#scoreOutput",
         "#results",
         "#result",
-
         ".scoreboard",
         ".results",
         ".result",
         ".finalScore",
-
         "[data-scoreboard]",
         "body"
       ];
@@ -2308,7 +2334,6 @@ window.addEventListener("resize", adjustBodyPadding);
             .filter(Boolean);
 
           for (const line of lines) {
-
             if (isScoreboardPipeString(line)) {
               log("🎯 FOUND:", line);
               PIPE(line);
@@ -2320,7 +2345,6 @@ window.addEventListener("resize", adjustBodyPadding);
             text.match(/[^\n]{0,250}\|[^\n]{0,250}/g) || [];
 
           for (const item of fallback) {
-
             const cleaned = item.trim();
 
             if (isScoreboardPipeString(cleaned)) {
@@ -2362,7 +2386,6 @@ window.addEventListener("resize", adjustBodyPadding);
       });
     });
 
-    // backup sweep
     setTimeout(huntForScoreboardPipe, 3000);
   });
 
