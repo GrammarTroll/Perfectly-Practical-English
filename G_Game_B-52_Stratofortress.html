@@ -2114,37 +2114,43 @@ window.addEventListener("resize", adjustBodyPadding);
 <script>
 async function sendRenderedScoreboardToSupabase() {
 
-  // =========================
-  // CONFIG (self-contained)
-  // =========================
   const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquYzWq6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
 
   const TABLE_NAME = "scoreboard_single_column";
 
   // =========================
-  // CAPTURE RENDERED SCOREBOARD
+  // CAPTURE SCOREBOARD (SAFE + RELIABLE)
   // =========================
-  const scoreboardEl = document.getElementById("scoreboardContainer");
+  const el = document.getElementById("scoreboardContainer");
 
-  const rawScoreboard =
-    scoreboardEl?.innerText ||
-    scoreboardEl?.textContent ||
-    "";
+  if (!el) {
+    console.error("❌ scoreboardContainer not found");
+    return false;
+  }
 
+  let rawScoreboard = el.innerText || el.textContent || "";
+
+  // Normalize whitespace safely
   const cleanedScoreboard = rawScoreboard
+    .replace(/\r/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
+  if (!cleanedScoreboard) {
+    console.warn("⚠️ Scoreboard is empty — nothing sent");
+    return false;
+  }
+
   // =========================
-  // BUILD PAYLOAD (SINGLE COLUMN)
+  // SUPABASE PAYLOAD
   // =========================
   const payload = {
     raw_text: cleanedScoreboard
   };
 
   // =========================
-  // SEND TO SUPABASE (SELF-CONTAINED FETCH)
+  // REQUEST
   // =========================
   try {
 
@@ -2162,22 +2168,21 @@ async function sendRenderedScoreboardToSupabase() {
       }
     );
 
-    const text = await response.text();
+    const resultText = await response.text();
 
     if (!response.ok) {
-      console.error("❌ Supabase insert failed:", response.status, text);
+      console.error("❌ Supabase error:", response.status, resultText);
       return false;
     }
 
-    console.log("✅ Scoreboard successfully stored:", text);
+    console.log("✅ Scoreboard stored successfully:", resultText);
     return true;
 
   } catch (err) {
-    console.error("❌ Network / fetch error:", err);
+    console.error("❌ Network error:", err);
     return false;
   }
 }
-
 </script>
 
 </body>
