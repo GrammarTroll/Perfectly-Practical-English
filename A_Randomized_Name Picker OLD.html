@@ -158,51 +158,45 @@ Red	46924
 Red	46930
 Red	46934
 Red	46939
-
 `;
 
 /* =========================
-   PARSE DATA
+   PARSER (FULLY DYNAMIC)
 ========================= */
 
 function parseData(raw) {
-
   const blocks = raw.split(/(?=~)/g);
 
   const result = {};
 
   for (let block of blocks) {
-
     block = block.trim();
-
     if (!block.startsWith("~")) continue;
 
-    const lines = block
-      .split("\n")
-      .map(l => l.trim())
-      .filter(Boolean);
-
+    const lines = block.split("\n").map(l => l.trim()).filter(Boolean);
     const className = lines[0].replace("~", "").trim();
 
-    const teams = {};
+    const classObj = {
+      teams: {},      // teamName -> array
+      order: []       // preserve first-seen order
+    };
 
     for (let i = 1; i < lines.length; i++) {
-
       const parts = lines[i].split(/\s+/);
-
       if (parts.length < 2) continue;
 
       const team = parts[0];
       const name = parts.slice(1).join(" ");
 
-      if (!teams[team]) {
-        teams[team] = [];
+      if (!classObj.teams[team]) {
+        classObj.teams[team] = [];
+        classObj.order.push(team);
       }
 
-      teams[team].push(name);
+      classObj.teams[team].push(name);
     }
 
-    result[className] = teams;
+    result[className] = classObj;
   }
 
   return result;
@@ -217,21 +211,16 @@ const classData = parseData(RAW_TEXT);
 const select = document.getElementById("classSelect");
 
 const placeholder = document.createElement("option");
-
 placeholder.value = "";
-placeholder.textContent = "Select a class...";
+placeholder.textContent = "Select a class…";
 placeholder.selected = true;
 placeholder.disabled = true;
-
 select.appendChild(placeholder);
 
 Object.keys(classData).forEach(cls => {
-
   const opt = document.createElement("option");
-
   opt.value = cls;
   opt.textContent = cls;
-
   select.appendChild(opt);
 });
 
@@ -239,120 +228,53 @@ Object.keys(classData).forEach(cls => {
    STATE
 ========================= */
 
-const TEAM_ORDER = ["Blue", "Green", "Orange", "Red"];
-
-let currentClass = null;
-
-let randomizedQueues = {};
-let queueIndexes = {};
-
+let queues = {};
 let currentTiles = [];
-
-/* =========================
-   SHUFFLE
-========================= */
-
-function shuffle(arr) {
-
-  const a = [...arr];
-
-  for (let i = a.length - 1; i > 0; i--) {
-
-    const j = Math.floor(Math.random() * (i + 1));
-
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-
-  return a;
-}
+let teamOrder = [];
 
 /* =========================
    LOAD CLASS
 ========================= */
 
 document.getElementById("loadBtn").onclick = () => {
-
   const cls = select.value;
-
   if (!cls || !classData[cls]) return;
 
-  currentClass = classData[cls];
+  const data = classData[cls];
 
-  randomizedQueues = {};
-  queueIndexes = {};
+  queues = {};
+  teamOrder = data.order;
 
-  TEAM_ORDER.forEach(team => {
-
-    const names = currentClass[team] || [];
-
-    randomizedQueues[team] = shuffle(names);
-
-    queueIndexes[team] = 0;
+  teamOrder.forEach(team => {
+    queues[team] = [...data.teams[team]];
   });
 
   buildTiles();
 };
 
 /* =========================
-   NEXT NAME
+   ROTATION PER TEAM
 ========================= */
 
-function nextName(team) {
-
-  const queue = randomizedQueues[team];
-
-  if (!queue || queue.length === 0) {
-    return "—";
-  }
-
-  let idx = queueIndexes[team];
-
-  /* exhausted -> reshuffle */
-
-  if (idx >= queue.length) {
-
-    randomizedQueues[team] = shuffle(queue);
-
-    queueIndexes[team] = 0;
-
-    idx = 0;
-  }
-
-  const name = randomizedQueues[team][idx];
-
-  queueIndexes[team]++;
-
-  return name;
+function next(team) {
+  const q = queues[team];
+  if (!q || q.length === 0) return "—";
+  const val = q.shift();
+  q.push(val);
+  return val;
 }
 
 /* =========================
-   BUILD INITIAL STACK
+   BUILD DYNAMIC COLUMN
 ========================= */
 
 function buildTiles() {
-
-  currentTiles = TEAM_ORDER.map(team => ({
+  currentTiles = teamOrder.map(team => ({
     team,
-    name: nextName(team)
+    name: next(team)
   }));
 
   render();
-}
-
-/* =========================
-   COLORS
-========================= */
-
-function colorFor(team) {
-
-  const map = {
-    Blue: "#4da3ff",
-    Green: "#3ddc84",
-    Orange: "#ffa94d",
-    Red: "#ff5c5c"
-  };
-
-  return map[team] || "#ddd";
 }
 
 /* =========================
@@ -360,24 +282,16 @@ function colorFor(team) {
 ========================= */
 
 function render() {
-
   const lane = document.getElementById("lane");
-
   lane.innerHTML = "";
 
-  currentTiles.forEach((tile, index) => {
-
+  currentTiles.forEach((t, i) => {
     const div = document.createElement("div");
-
     div.className = "tile";
+    div.style.background = colorFor(t.team);
+    div.textContent = t.name;
 
-    div.style.background = colorFor(tile.team);
-
-    div.textContent = `${tile.team}: ${tile.name}`;
-
-    /* only top tile clickable */
-
-    if (index === 0) {
+    if (i === 0) {
       div.onclick = rotate;
     }
 
@@ -386,17 +300,36 @@ function render() {
 }
 
 /* =========================
-   ROTATE QUEUE
+   SIMPLE COLOR HASH
+========================= */
+
+function colorFor(team) {
+  const colors = [
+    "#4da3ff",
+    "#3ddc84",
+    "#ffa94d",
+    "#ff5c5c",
+    "#c084fc",
+    "#f472b6",
+    "#34d399"
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < team.length; i++) {
+    hash = team.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+}
+
+/* =========================
+   ROTATE TOP TILE
 ========================= */
 
 function rotate() {
-
   const moved = currentTiles.shift();
-
-  moved.name = nextName(moved.team);
-
+  moved.name = next(moved.team);
   currentTiles.push(moved);
-
   render();
 }
 

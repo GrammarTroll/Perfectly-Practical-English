@@ -1,0 +1,2059 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no" />
+<title>Flash CardZ</title>
+<script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  /* Base */
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f7fdfb; }
+  #layout { max-width: 480px; margin:0 auto; padding:20px; box-sizing: border-box; }
+  h2 { text-align:left; margin-bottom:12px; font-size:20px; }
+
+  .top-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: nowrap; align-items: center; }
+  .top-bar input[type="text"] { flex: 1 1 45%; padding: 6px; font-size: 14px; border: 1px solid #9fc8e8; border-radius: 6px; box-sizing: border-box; min-width: 0; }
+  .top-bar button { padding: 6px 12px; font-size: 14px; border: none; border-radius: 6px; background: #1976d2; color: #fff; cursor: pointer; }
+
+  .flashcard-container { perspective: 1000px; margin-bottom: 12px; }
+  .flashcard { width: 100%; min-height: 100px; background: #eaf6ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transform-style: preserve-3d; transition: transform 0.6s; position: relative; border: 1px solid #9aaed1; box-sizing: border-box; }
+  .flashcard.flipped { transform: rotateY(180deg); }
+  .flashcard .front, .flashcard .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; border-radius: 12px; padding: 12px; text-align: center; box-sizing: border-box; }
+
+.flashcard .back {
+    transform: rotateY(180deg);
+    background: #ffeacf;
+    font-size: 14px;
+    text-align: left;
+    align-items: center;        /* horizontal center */
+    justify-content: center;    /* vertical center */
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    overflow-wrap: break-word;
+}
+
+  #vocabHeader { font-size: 16px; font-weight: bold; color: white; background: #1976d2; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-bottom: 12px; text-align: center; transition: background 0.3s; }
+  #vocabHeader:hover { background: #1565c0; }
+
+  #vocabList { list-style-type: disc; list-style-position: outside; padding-left: 20px; margin:0; }
+  #vocabList li { margin-bottom: 6px; font-size: 14px; text-align: left; }
+
+  #exampleInput { width: 100%; padding: 8px; font-size: 14px; border: 1px solid #9aaed1; border-radius: 8px; margin-bottom: 12px; box-sizing: border-box; }
+
+  #navButtons { display: flex; gap: 12px; justify-content: space-between; margin-bottom: 12px; }
+
+  #scoreboard { display: none; border: 2px solid #39FF14; padding: 20px; border-radius: 10px; background: #fff; font-family: monospace; font-size: 14px; max-height: 50vh; overflow-y: auto; box-sizing: border-box; }
+  #scoreboard pre { margin: 0; }
+  #scoreboard .btn-group { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+  button { padding: 6px 12px; font-size: 14px; border: none; border-radius: 6px; background: #1976d2; color: white; cursor: pointer; transition: background 0.3s; }
+  button:hover { background: #1565c0; }
+
+  @media (max-width: 480px) {
+    h2 { font-size: 18px; }
+    .flashcard { font-size: 16px; min-height: 90px; }
+    #exampleInput { font-size: 13px; padding: 6px; }
+    #navButtons button, #scoreboard button { font-size: 13px; padding: 5px 10px; }
+    .top-bar input[type="text"] { font-size: 13px; padding: 5px; }
+  }
+
+
+/* Footer styles */
+#copyrightSection {
+  margin-top: 0px;   /* move it up by 20px */
+  text-align: left;    /* flush left text */
+  padding: 0;          /* remove centering padding */
+  font-size: 8px;
+}
+
+
+/* ===============================
+   FORM ROW (shared layout)
+   =============================== */
+
+.formRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;        /* 🔒 NEVER stack */
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Buttons in a row */
+.formRow > button {
+  margin-top: -10px;   /* bump buttons up 3–5px */
+
+  flex: 0 0 38px;
+  height: 38px;
+  padding: 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Selector field behaves like an input */
+.formRow > #sectionWheelContainer {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  position: relative;
+  background: #fff;
+  border: 1px solid #999;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);
+}
+
+/* BUTTONS */
+.sectionBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+  z-index: 2;
+}
+
+#sectionUp {
+  left: -3px;
+}
+
+#sectionDown {
+  right: -3px;
+}
+
+</style>
+</head>
+<body>
+<div id="layout">
+  <h2></h2>
+
+  <div class="top-bar">
+    <input id="name" type="text" placeholder="Name" autocomplete="off" />
+    <input id="studentId" type="text" placeholder="ID" autocomplete="off" />
+    <button id="finishBtn">Finish</button>
+  </div>
+
+<div class="formRow">
+  <button type="button" id="sectionUp">▲</button>
+
+  <div id="sectionWheelContainer">
+    <div class="wheel"></div>
+  </div>
+
+  <button type="button" id="sectionDown">▼</button>
+</div>
+
+
+  <div id="vocabHeader">Click to view / hide the complete list.</div>
+  <ul id="vocabList"></ul>
+
+
+  <div class="flashcard-container visible" id="flashcardContainer">
+    <div class="flashcard" id="flashcard">
+      <div class="front"></div>
+      <div class="back"></div>
+    </div>
+  </div>
+
+  <input type="text" id="exampleInput" class="visible" placeholder="Type your example sentence..." />
+
+  <div id="navButtons" class="visible">
+    <button id="prevBtn">Previous</button>
+    <button id="nextBtn">Next</button>
+  </div>
+
+  <div id="scoreboard">
+    <pre id="scoreOutput"></pre>
+    <div class="btn-group" id="scoreBtns">
+      <button id="copyBtn">Copy</button>
+      <button id="downloadTextBtn">↓TXT</button>
+      <button id="downloadPngBtn">↓PNG</button>
+    </div>
+  </div>
+
+
+  <!-- Copyright Footer Section -->
+  <section id="copyrightSection">
+    <div class="footer-note copyright">© 2026 Perfectly Practical English™. All rights reserved.</div>
+  </section>
+
+  </div>
+</div>
+</div>
+
+<script>
+async function resolveRaw(source) {
+  // If it looks like inline content, return it directly
+  if (source.includes('\n')) return source.trim();
+
+  // Otherwise, treat it as a filename and fetch it
+  const res = await fetch(source);
+  if (!res.ok) throw new Error("Failed to load " + source);
+  return (await res.text()).trim();
+}
+</script>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+// --- Starfield ---
+const canvas = document.getElementById('terrainCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight;
+const stars = [];
+for(let i=0;i<200;i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, z: Math.random()*2+0.5});
+function drawStarfield(){
+  ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let s of stars){
+    s.x -= 0.5*s.z;
+    if(s.x<0){ s.x=canvas.width; s.y=Math.random()*canvas.height; s.z=Math.random()*2+0.5; }
+    ctx.fillStyle='white'; ctx.fillRect(s.x,s.y,s.z,s.z);
+  }
+  requestAnimationFrame(drawStarfield);
+}
+drawStarfield();
+</script>
+
+<script>
+// ✅ Flexible parser: supports both old verbose and simple "word - definition" lines
+function parseVocabInput(input) {
+  const lines = input.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  const result = [];
+  let currentWord = null;
+  let currentDef = "";
+
+  lines.forEach(line => {
+    // Line starts with bullet → verbose format
+    if (/^[•*-]/.test(line)) {
+      if (currentWord) result.push({ word: currentWord, definition: currentDef.trim() });
+      const match = line.match(/^[•*-]\s*(.+?)\s*(?:–|—|-)\s*(.+)/);
+      if (match) { currentWord = match[1].trim(); currentDef = match[2].trim(); }
+      else { currentWord = line.replace(/^[•*-]\s*/, ""); currentDef = ""; }
+    } 
+    // Simple "word - definition" format
+ else if (/\s[-–—]\s/.test(line)) {
+  if (currentWord) {
+    result.push({
+      word: currentWord,
+      definition: currentDef.trim()
+    });
+  }
+
+  const match = line.match(/^(.+?)\s[-–—]\s(.+)$/);
+  if (match) {
+    currentWord = match[1].trim();
+    currentDef = match[2].trim();
+  }
+}
+
+    else { // continuation line
+      currentDef = currentDef ? currentDef + "<br/>" + line : line;
+    }
+  });
+  if (currentWord) result.push({ word: currentWord, definition: currentDef.trim() });
+  return result;
+}
+
+// Example vocab source: old verbose OR simple format
+const rawVocabText = `
+// You can paste either format here
+
+~ Unit 1 – Family & Friends
+
+• always ⏰ - every time
+constantly, forever
+
+• never 🚫 - not ever
+at no point, not once
+
+• usually 📅 - generally
+commonly, mostly
+
+• sometimes 🔄 - occasionally
+at intervals, every so often
+
+• often 🔁 - many times
+frequently, regularly
+
+• rarely 🌙 - not often
+scarcely, infrequently
+
+• hardly ever 💤 - almost never
+seldom, almost not
+
+• rollerblading 🛼 - skating on wheels
+skating, blading
+
+• musical instrument 🎸 - music tool
+instrument, gear
+
+• magazines 📖 - periodicals
+journals, publications
+
+• dance class 💃 - dance lesson
+workshop, training session
+
+• acrobatics 🤸 - gymnastic performance
+tumbling, stunts
+
+• exercise 🏋️ - physical activity
+training, workout
+
+• museums 🏛️ - exhibition place
+galleries, exhibit centers
+
+• be keen on ❤️ - like very much
+be into, be fond of
+
+• interested in 🔍 - have interest
+curious about, drawn to
+
+• parents 👨‍👩‍👧 - mother and father
+guardians, mum and dad
+
+• cousin 👦 - uncle/aunt’s child
+relative, extended family member
+
+• aunt 👩 - parent’s sister
+relative, family auntie
+
+• uncle 👨 - parent’s brother
+relative, family uncle
+
+• typical 📘 - normal
+standard, ordinary
+
+• awesome 🌟 - excellent
+amazing, fantastic
+
+• brilliant 💡 - very smart
+outstanding, superb
+
+• experimental 🧪 - testing-based
+trial-based, test-phase
+
+• information ℹ️ - facts/data
+data, knowledge
+
+~Unit 2 – Food
+
+• onions 🧅 - vegetable
+bulbs, alliums
+
+• potatoes 🥔 - tuber
+spuds, tubers
+
+• sugar 🍬 - sweetener
+sweetener, sucrose
+
+• ketchup 🍅 - tomato sauce
+sauce, condiment
+
+• lemonade 🍋 - lemon drink
+citrus drink, soft drink
+
+• butter 🧈 - dairy spread
+spread, dairy fat
+
+• mayonnaise 🥫 - creamy sauce
+mayo, dressing
+
+• crisps 🍟 - potato chips
+chips, snacks
+
+• carton 📦 - box container
+container, pack box
+
+• jar 🫙 - glass container
+pot, storage jar
+
+• loaf 🍞 - bread shape
+bread block, bread unit
+
+• packet 📩 - small pack
+pack, sachet
+
+• tub 🪣 - plastic container
+container, bucket
+
+• take out 📤 - remove
+remove, extract
+
+• boil ♨️ - cook in water
+simmer, heat in water
+
+• chop 🔪 - cut
+slice, dice
+
+• fry 🍳 - cook in oil
+sauté, pan-cook
+
+• heat 🔥 - make hot
+warm, raise temperature
+
+• yummy 😋 - tasty
+delicious, scrumptious
+
+• fresh 🌿 - not old
+crisp, newly made
+
+• spicy 🌶️ - hot taste
+fiery, hot-flavoured
+
+• ingredients 🥣 - components
+elements, components
+
+• dessert 🍰 - sweet food
+sweet course, pudding
+
+• prepare 👩‍🍳 - get ready
+get ready, assemble
+
+• olive oil 🫒 - oil
+cooking oil, oil extract
+
+• taste 👅 - flavour
+flavour, savour
+
+• grilled 🍖 - cooked over fire
+barbecued, flame-cooked
+
+• vegetarian 🥗 - no meat diet
+plant-based eater, non-meat eater
+
+• recommend 👍 - suggest
+advise, put forward
+
+• unhealthy ⚠️ - bad for health
+harmful, damaging
+
+~ Unit 3 – Work
+
+• accountant 🧾 - finance worker
+bookkeeper, finance clerk
+
+• architect 📐 - building designer
+designer, planner
+
+• astronaut 🚀 - space traveler
+space explorer, cosmonaut
+
+• builder 🧱 - construction worker
+constructor, tradesperson
+
+• engineer ⚙️ - technical worker
+technician, specialist
+
+• hairdresser ✂️ - hair cutter
+stylist, barber
+
+• journalist 📰 - news reporter
+reporter, correspondent
+
+• lawyer ⚖️ - legal expert
+solicitor, counsel
+
+• plumber 🚰 - pipe worker
+pipe fitter, repair worker
+
+• receptionist 🛎️ - front desk worker
+front-desk clerk, admin assistant
+
+• volunteer 🤝 - unpaid helper
+helper, unpaid worker
+
+• profession 💼 - job type
+occupation, career
+
+• company 🏢 - business
+firm, corporation
+
+• fascinating 🤩 - very interesting
+captivating, gripping
+
+• duty 📋 - responsibility
+task, obligation
+
+• earn money 💵 - get income
+make income, get paid
+
+• responsible ✅ - reliable
+dependable, trustworthy
+
+• education 🎓 - learning system
+schooling, training system
+
+• colleague 👥 - coworker
+coworker, associate
+
+• life experience 🌍 - life knowledge
+personal knowledge, lived experience
+
+• language 🗣️ - communication system
+speech system, communication
+
+~ Unit 4 – People
+
+• personality 😊 - character
+temperament, traits
+
+• unfriendly 😒 - not friendly
+hostile, cold
+
+• unkind 😠 - cruel
+mean, harsh
+
+• unsociable 🙍 - not social
+withdrawn, reserved
+
+• flexible 🤹 - adaptable
+adaptable, versatile
+
+• calm 😌 - peaceful
+relaxed, composed
+
+• cheerful 😄 - happy
+joyful, upbeat
+
+• negative ☁️ - pessimistic
+pessimistic, gloomy
+
+• sense of humour 😂 - funny feeling
+wit, comedic sense
+
+• creative 🎨 - imaginative
+inventive, original
+
+• energetic ⚡ - full of energy
+lively, dynamic
+
+• generous 🎁 - giving
+giving, charitable
+
+• confident 😎 - self-assured
+self-assured, bold
+
+• appearance 👀 - looks
+looks, outward form
+
+• good-looking 😍 - attractive
+attractive, appealing
+
+• bald 🪒 - no hair
+hairless, shaved-headed
+
+• ugly 😬 - not pretty
+unattractive, plain
+
+• well-built 💪 - strong body
+muscular, strong-built
+
+• curly 🌀 - wavy hair
+ringleted, curled
+
+• wavy 🌊 - soft waves
+rippled, undulating
+
+• straight 📏 - not curly
+sleek, uncurled
+
+• spiky 🦔 - upright hair
+bristled, pointed
+
+• ponytail 🎀 - tied hair
+tied-back style, hair tie
+
+• shaved ✂️ - no hair
+bald-cut, clean-shaven
+
+~ Unit 5 – Education
+
+• kindergarten 🧸 - early school
+preschool, nursery
+
+• primary school 🏫 - first school
+elementary school, junior school
+
+• secondary school 🎒 - high school
+high school, senior school
+
+• university 🎓 - higher education
+college, academy
+
+• library 📚 - book place
+reading room, archive
+
+• canteen 🍽️ - food place
+cafeteria, refectory
+
+• corridor 🚪 - hallway
+hallway, passage
+
+• lessons 📝 - classes
+classes, sessions
+
+• on time ⏱️ - punctual
+punctual, timely
+
+• late ⌛ - not on time
+delayed, overdue
+
+• Chemistry ⚗️ - science subject
+chemical science, chemistry subject
+
+• Physics 🧲 - science subject
+physical science, mechanics
+
+• Biology 🧬 - life science
+life science, natural science
+
+• Geography 🌍 - Earth study
+earth studies, mapping science
+
+• experiments 🧪 - tests
+tests, trials
+
+• concentrate 🎯 - focus
+focus, attend
+
+• professor 👨‍🏫 - university teacher
+lecturer, academic
+
+• grades 📊 - marks
+scores, marks
+
+• was ⏳ - past be
+existed (past), happened (past)
+
+• were 📜 - past plural be
+existed (plural), happened (plural)
+
+• could 👍 - past ability
+was able to, had ability
+
+~ Unit 6 – Health & Sport
+
+• success 🏆 - achievement
+victory, triumph
+
+• badminton 🏸 - sport
+shuttle sport, racket game
+
+• basketball 🏀 - sport
+court game, hoop sport
+
+• climbing 🧗 - climbing activity
+scaling, mount ascent
+
+• cycling 🚴 - bike riding
+biking, riding
+
+• stretching 🤲 - muscle exercise
+loosening, extending
+
+• yoga 🧘 - body exercise
+mindfulness exercise, body practice
+
+• karate 🥋 - martial art
+combat sport, striking art
+
+• kung fu 🐉 - martial art
+martial discipline, combat skill
+
+• martial arts ⚔️ - fighting arts
+combat training, fighting systems
+
+• skiing 🎿 - snow sport
+snow gliding, winter sport
+
+• kayaking 🚣 - paddling sport
+paddling, canoe sport
+
+• sailing ⛵ - boat sailing
+boating, wind navigation
+
+• skating ⛸️ - ice/wheel sport
+gliding sport, ice/wheel movement
+
+• gymnast 🤸‍♂️ - athlete
+athlete, acrobat
+
+• competition 🥇 - contest
+contest, showdown
+
+• explained 📖 - clarified
+made clear, broke down
+
+• got 📥 - obtained, received
+obtained, received
+- sǐa chii-wít
+• died 🕊️ - stopped living
+passed, perished
+
+• climbed 🧗‍♂️ - went up on something
+scaled, ascended
+
+• fell 🍂 - dropped down
+tumbled down
+
+• believed 🙏 - to have thought something was the truth
+accepted, trusted
+
+• reached 🏁 - stretched out to touch
+arrived, attained
+
+• thought 🤔 - to have processed information with your brain
+figured, reckoned
+
+• phoned 📞 - called by phone
+called, rang up
+
+• stopped 🛑 - ended
+ceased, terminated
+
+• tried 💪 - attempted to do something
+attempted, made effort
+
+• became 🔄 - changed into something else
+turned into, developed
+
+• went 🚶 - to have gone from one place to another
+traveled, headed
+
+• drank 🥤 - to have swallowed liquid
+sipped, consumed
+
+• had 📦 - to have possessed something
+possessed, experienced
+
+• ran 🏃 - to have gone quickly by foot
+sprinted, dashed
+
+• said 🗨️ - to have expresssed something by speaking
+stated, voiced
+
+• took ✋ - to have gone away with something
+grabbed, collected
+
+• left 🚪 - departed, exited
+departed, exited
+
+• ate 🍽️ - to have swallowed food
+consumed, ate up
+
+• began ▶️ - to have started something
+initiated, started
+
+• met 🤝 - to have spent time talking with someone, possibly for the first time
+encountered, ran into
+
+• talked 💬 - to have spoken with someone
+chatted, spoke
+
+• did ✔️ - to have completed an action
+performed, carried out
+
+• individual 👤 - one of something or someone
+single person, one unit
+
+~ Unit 7 – Travel
+
+• activity 🎯 - action
+event, task
+
+• adventure 🧭 - exciting trip
+expedition, journey
+
+• backpacking 🎒 - travel with backpack
+budget travel, backpack trip
+
+• book a flight ✈️ - reserve flight
+reserve ticket, secure seat
+
+• accommodation 🏨 - place to stay
+lodging, stay place
+
+• excursion 🚌 - short trip
+outing, short journey
+
+• transport 🚆 - travel system
+transit, mobility system
+
+• reservation 📋 - booking
+booking, holding
+
+• arrangements 🗂️ - plans
+setup, organisation
+
+• package tour 🌍 - all-in tour
+bundled trip, organised holiday
+
+• see the sights 📸 - sightseeing
+sightseeing, touring
+
+• check-in desk 🛫 - airport desk
+airport counter, registration point
+
+• foreign country 🌎 - other country
+overseas nation, abroad
+
+• trip abroad 🧳 - overseas trip
+overseas travel, international trip
+
+• announcement 📢 - public message
+notice, public statement
+
+• luggage 🧳 - bags
+baggage, suitcases
+
+• brochure 📘 - information booklet
+leaflet, pamphlet
+
+• passenger 🧍 - traveler
+traveler, rider
+
+• tourist 🗺️ - visitor
+visitor, sightseer
+
+• destination 📍 - end place
+endpoint, arrival place
+
+• youth hostel 🛏️ - cheap hostel
+backpacker lodge, budget stay
+
+~ Unit 8 – Nature
+
+• pollution 🏭 - environmental damage
+contamination, fouling
+
+• climate change 🌡️ - weather change
+climate shift, global shift
+
+• global warming 🔥 - Earth heating
+temperature rise, heating trend
+
+• protect the environment 🌱 - save nature
+conserve nature, safeguard planet
+
+• toxic waste ☣️ - poisonous waste
+hazardous material, dangerous waste
+
+• recycling ♻️ - reuse materials
+reuse process, material recovery
+
+• habitat 🌳 - animal home
+ecosystem, natural home
+
+• wildlife 🦁 - wild animals
+fauna, wild animals
+
+• disappear 👻 - vanish
+vanish, fade out
+
+• hunt 🏹 - chase animals
+track, pursue
+
+• melt 🧊 - turn to liquid
+liquefy, dissolve
+
+• predict 🔮 - forecast
+forecast, anticipate
+
+• rubbish 🗑️ - trash
+waste, garbage
+
+• public transport 🚍 - shared transport
+mass transit, shared travel
+
+• solve problems 🛠️ - fix issues
+fix issues, resolve matters
+
+• temperature 🌡️ - heat level
+heat level, warmth
+
+• degree 📏 - unit
+measurement unit, scale unit
+
+• continent 🌍 - land mass
+landmass, major region
+
+• energy ⚡ - power
+power, force
+
+• intelligent 🧠 - smart
+clever, bright
+
+• evolution 🐒 - development over time
+gradual development, progression
+
+
+~Signal Words
+• Time ⏰ – words that tell when something happens<br>
+on, at, in, before, after, since, until, during, for, now, yesterday, today, tomorrow, later, then, when, while, once
+
+• Addition ➕ – words that add ideas together<br>
+and, also, too, with, plus, as well as, not only...but also, both...and
+
+• Cause / Effect 🔗 – words that show a reason or result<br>
+because, so, since, because of, due to, as a result, therefore, that’s why
+
+• Comparison / Similarity / Difference ⚖️ – words that compare things<br>
+like, as, as...as, than, similar to, different from, more than, less than, the most, just as...so, whereas, in contrast to
+
+• Contrast / Opposition 🎭 – words that show differences<br>
+but, although, though, even though, however, yet, still, despite, instead, whereas, while, on the other hand
+
+• Frequency 〰️ – words that tell how often something happens<br>
+always, usually, often, sometimes, occasionally, rarely, never, every day, once a week, hardly ever, from time to time
+
+• Possibility / Certainty 🎲 – words that show how possible or sure something is<br>
+maybe, probably, possibly, must, might, may, could, can, definitely, certainly
+
+• Advice / Obligation / Permission ☝️ – words that tell rules or give guidance<br>
+must, must not, have to, don’t have to, should, ought to, had better, can, cannot, may, could
+
+• Manner 🎭 – words that tell how something is done<br>
+quickly, slowly, carefully, easily, well, badly, with, by, in a...way, as
+
+• Place / Location 📍 – words that tell where something is<br>
+in, on, at, under, above, between, near, next to, here, there, everywhere, anywhere
+
+• Condition 🌧️ – words that show something depends on something else<br>
+if, unless, in case, on condition that
+
+• Emphasis / Focus 🎯 – words that make something stronger or more important<br>
+only, just, even, especially, mainly, particularly
+
+• Questions (Interrogatives) ❓ – words used to ask questions<br>
+how, when, where, why
+
+• Relative Words 👨‍👩‍👧‍👦 – words that connect ideas about time, place, reason, or manner<br>
+when, where, why, how
+
+• Direction / Movement 🧭 – words that show movement or direction<br>
+to, from, toward, away from, up, down, forward, back
+
+• Affirmative and Negative ✔️❌ – words that show yes or no<br>
+yes, no
+
+`;
+
+</script>
+
+<script>
+/* =========================================
+   FREEZE RAW TEXT FOR SECTION SELECTOR
+   (MUST RUN AFTER wordListSource EXISTS)
+   ========================================= */
+
+(function () {
+  window.__RAW_SECTION_TEXT__ = rawVocabText;
+  console.log("✅ RAW SECTION TEXT FROZEN",
+              window.__RAW_SECTION_TEXT__.length);
+})();
+
+</script>
+
+<!-- 👇 PUT THE NEW SCRIPT HERE -->
+<script>
+/* SECTION → VOCAB BRIDGE */
+let vocabPairs = [];
+
+
+window.addEventListener("sectionchange", (e) => {
+  const sectionText = e.detail?.text || "";
+
+  vocabPairs = parseVocabInput(sectionText);
+
+  if (!vocabPairs.length) {
+    return;
+  }
+
+  studentSentences = Array(vocabPairs.length).fill("");
+  flashcardIndex = 0;        // ✅ THIS FIXES IT
+
+  renderVocabList();
+  updateFlashcard();
+  checkInputs();
+});
+
+
+
+
+
+// 🔥 INIT FIRST SECTION (AFTER LISTENER EXISTS)
+window.addEventListener("DOMContentLoaded", () => {
+  if (window.getSelectedSectionIndex) {
+    const i = window.getSelectedSectionIndex();
+    if (i === 0 && typeof selectSection === "function") {
+      selectSection(1, true);
+    }
+  }
+});
+
+
+</script>
+
+<script>
+/* =========================================
+   HARD SECTION CORPUS OVERRIDE (MC-IMMUNE)
+   ========================================= */
+
+(function () {
+
+  // Preserve original full text
+  const FULL_TEXT = window.wordListText;
+
+  // Active corpus exposed globally
+  window.activeExerciseText = "";
+
+  // 🔥 OVERRIDE wordListText dynamically
+  Object.defineProperty(window, "wordListText", {
+    get() {
+      return window.activeExerciseText || FULL_TEXT;
+    },
+    set(val) {
+      // allow initial assignment only
+      window._wordListText = val;
+    }
+  });
+
+  // Listen for section changes
+window.addEventListener("sectionchange", (e) => {
+  const sectionText = e.detail?.text || "";
+
+  // Build sentences ONLY from section
+  sentences.length = 0;
+  allCorrectAnswers.length = 0;
+
+  const lines = sectionText
+    .split("\n")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  lines.forEach(line => {
+    if (!line.includes("|")) return;
+    sentences.push(line);
+
+    const matches = line.match(/\|(.+?)\|/g);
+    if (matches) {
+      matches.forEach(m =>
+        allCorrectAnswers.push(m.replace(/\|/g, ""))
+      );
+    }
+  });
+
+  allCorrectAnswers = [...new Set(allCorrectAnswers)];
+
+  // Reset runtime state
+  nextSentenceIndex = 0;
+  activeSentences.length = 0;
+  totalWords = 0;
+  correctWords = 0;
+
+  // Clear UI
+  mcButtonsContainer.innerHTML = "";
+  typedDisplay.textContent = "";
+
+  console.log("✅ Section locked:", e.detail.name);
+});
+
+})();
+</script>
+
+
+<script>
+
+
+/* =========================================
+   SECTION DIAL — SCROLL + CLICK ONLY
+   (SECTION-SCOPED, MC-SAFE, AUTO-TRIGGERING)
+   ========================================= */
+
+(function () {
+
+  const ITEM_HEIGHT = 38;
+
+  let sections = [];
+  let sectionIndex = 0; // 0 = placeholder
+
+  let offset = 0;
+  let startY = 0;
+  let dragging = false;
+let isProgrammaticSelect = false;
+
+
+  /* ---------- GLOBAL MC POOL (SECTION ONLY) ---------- */
+  window.sectionAnswerPool = [];
+
+  function rebuildMCPool(sectionText) {
+    window.sectionAnswerPool = sectionText
+      .split("\n")
+      .map(line => {
+        const m = line.match(/\|([^|]+)\|/);
+        return m ? m[1] : null;
+      })
+      .filter(Boolean);
+
+    // DEBUG — remove later
+    console.log("MC pool rebuilt (section only):", window.sectionAnswerPool);
+  }
+
+  /* ---------- PARSE SECTIONS (STRICT ~ BOUNDARIES) ---------- */
+  function parseSections(raw) {
+    const chunks = raw.split(/\n(?=~+)/);
+
+    return chunks
+      .map(chunk => chunk.trim())
+      .filter(chunk => chunk.startsWith("~"))
+      .map(chunk => {
+        const lines = chunk.split("\n");
+        const name = lines.shift().replace(/^~+/, "").trim();
+        const text = lines.join("\n").trim();
+        return { name, text };
+      });
+  }
+
+  const parsedSections = parseSections(window.__RAW_SECTION_TEXT__);
+
+
+  sections = [
+    { name: "Select a category.", text: "" },
+    ...parsedSections
+  ];
+
+  /* ---------- BUILD UI ---------- */
+  const container = document.getElementById("sectionWheelContainer");
+
+
+// ▲ / ▼ BUTTONS
+const btnUp = document.getElementById("sectionUp");
+const btnDown = document.getElementById("sectionDown");
+
+btnUp.addEventListener("click", () => {
+  selectSection(sectionIndex - 1, true);
+});
+
+btnDown.addEventListener("click", () => {
+  selectSection(sectionIndex + 1, true);
+});
+  container.style.cssText = `
+    position: relative;
+    height: ${ITEM_HEIGHT}px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    touch-action: pan-y;
+    cursor: pointer;
+  `;
+
+  const wheel = document.createElement("div");
+  wheel.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    will-change: transform;
+  `;
+
+  sections.forEach((sec, index) => {
+    const item = document.createElement("div");
+    item.textContent = sec.name;
+    item.style.cssText = `
+      height: ${ITEM_HEIGHT}px;
+      line-height: ${ITEM_HEIGHT}px;
+      text-align: center;
+      font-size: ${index === 0 ? "14px" : "15px"};
+      font-style: ${index === 0 ? "italic" : "normal"};
+      color: ${index === 0 ? "#999" : "#777"};
+      user-select: none;
+      white-space: nowrap;
+    `;
+
+item.addEventListener("click", () => {
+  selectSection(index, true);
+});
+
+
+    wheel.appendChild(item);
+  });
+
+  container.appendChild(wheel);
+
+  /* ---------- UPDATE ---------- */
+function update() {
+  wheel.style.transform = `translateY(${offset}px)`;
+
+  [...wheel.children].forEach((el, i) => {
+    if (i === sectionIndex && i !== 0) {
+      el.style.color = "#1f5fbf";
+      el.style.fontWeight = "700";
+    } else {
+      el.style.color = i === 0 ? "#999" : "#777";
+      el.style.fontWeight = "600";
+    }
+  });
+}
+  function fireSectionChange() {
+if (sectionIndex === 0) return;
+
+const section = sections[sectionIndex];
+
+
+    window.sectionSelectionChanged = true;
+
+    // 🔑 BUILD MC POOL HERE
+    rebuildMCPool(section.text);
+
+    window.dispatchEvent(new CustomEvent("sectionchange", {
+      detail: {
+        index: sectionIndex,
+
+        name: section.name,
+        text: section.text
+      }
+    }));
+  }
+
+function snap(fireEvent = false) {
+  // 🔑 CALCULATE INDEX FROM OFFSET
+  const rawIndex = Math.round(-offset / ITEM_HEIGHT);
+  sectionIndex = Math.max(1, Math.min(sections.length - 1, rawIndex));
+
+  offset = -sectionIndex * ITEM_HEIGHT;
+
+  wheel.style.transition = "transform 0.15s ease-out";
+  update();
+  setTimeout(() => wheel.style.transition = "", 150);
+
+  if (fireEvent) {
+    fireSectionChange();
+  }
+}
+
+
+function selectSection(index, fireEvent = true) {
+  sectionIndex = Math.max(1, Math.min(sections.length - 1, index));
+  offset = -sectionIndex * ITEM_HEIGHT;
+  snap(fireEvent);
+}
+
+
+
+
+  /* ---------- DRAG ---------- */
+  function start(y) {
+    dragging = true;
+    startY = y;
+  }
+
+  function move(y) {
+    if (!dragging) return;
+    offset += y - startY;
+    startY = y;
+    update();
+  }
+
+  function end() {
+    if (!dragging) return;
+    dragging = false;
+    snap(true);
+  }
+
+  container.addEventListener("mousedown", e => start(e.clientY));
+  window.addEventListener("mousemove", e => move(e.clientY));
+  window.addEventListener("mouseup", end);
+
+  container.addEventListener("touchstart", e => start(e.touches[0].clientY), { passive: true });
+  container.addEventListener("touchmove", e => move(e.touches[0].clientY), { passive: true });
+  container.addEventListener("touchend", end);
+
+  /* ---------- MOUSE WHEEL ---------- */
+  container.addEventListener("wheel", e => {
+    e.preventDefault();
+    offset += e.deltaY * -0.3;
+    update();
+    snap(true);
+  }, { passive: false });
+
+  /* ---------- INIT ---------- */
+  offset = 0;
+  update();
+
+
+
+
+  /* ---------- SECTION SELECTION BRIDGE ---------- */
+window.getSelectedSectionText = function () {
+  if (sectionIndex === 0) return "";
+  return sections[sectionIndex]?.text || "";
+};
+
+window.getSelectedSectionIndex = function () {
+  return sectionIndex;
+};
+
+
+})();
+</script>
+
+
+<script>
+
+async function loadVocab(source) {
+  let text = "";
+  // If it looks like a filename (ends with .txt), fetch it
+  if (source.trim().endsWith(".txt")) {
+    try {
+      const res = await fetch(source.trim());
+      if (!res.ok) throw new Error("Failed to load file");
+      text = await res.text();
+    } catch (err) {
+      console.error("Error loading vocab file:", err);
+      return [];
+    }
+  } else {
+    // Otherwise treat as raw text
+    text = source;
+  }
+  return parseVocabInput(text);
+}
+
+// Example usage:
+// ❌ Disabled: section selector now controls vocab loading
+// loadVocab("vocab.txt").then(pairs => {
+//   console.log("Loaded vocab pairs:", pairs);
+// });
+
+// Initialize vocabPairs
+
+let studentSentences = [];
+let flashcardIndex = 0;
+
+
+const flashcard = document.getElementById('flashcard');
+const front = flashcard.querySelector('.front');
+const back = flashcard.querySelector('.back');
+const exampleInput = document.getElementById('exampleInput');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const finishBtn = document.getElementById('finishBtn');
+const nameEl = document.getElementById('name');
+const idEl = document.getElementById('studentId');
+const scoreboard = document.getElementById('scoreboard');
+const scoreOutput = document.getElementById('scoreOutput');
+const vocabList = document.getElementById('vocabList');
+const vocabHeader = document.getElementById('vocabHeader');
+
+// Render vocab list
+function renderVocabList() {
+  vocabList.innerHTML = vocabPairs.map(p => `<li>${p.word}: ${p.definition}</li>`).join('');
+}
+vocabHeader.addEventListener('click', () => {
+  vocabList.style.display = vocabList.style.display === 'none' ? 'block' : 'none';
+});
+
+// Flashcards
+function updateFlashcard() {
+  if (!vocabPairs.length) return;
+
+  front.textContent = vocabPairs[flashcardIndex].word;
+  back.innerHTML = vocabPairs[flashcardIndex].definition;
+  exampleInput.value = studentSentences[flashcardIndex] || '';
+
+  prevBtn.style.display = flashcardIndex === 0 ? "none" : "inline-block";
+  nextBtn.textContent =
+    flashcardIndex === vocabPairs.length - 1 ? "Finish" : "Next";
+
+  flashcard.classList.remove('flipped');
+}
+
+
+function checkInputs() {
+  finishBtn.style.display = (nameEl.value.trim() && idEl.value.trim()) ? 'inline-block' : 'none';
+}
+
+flashcard.addEventListener('click', () => flashcard.classList.toggle('flipped'));
+exampleInput.addEventListener('input', () =>
+  studentSentences[flashcardIndex] = exampleInput.value.trim()
+);
+
+nameEl.addEventListener('input', checkInputs);
+idEl.addEventListener('input', checkInputs);
+
+prevBtn.addEventListener('click', () => {
+  if (flashcardIndex > 0) {
+    flashcardIndex--;
+    updateFlashcard();
+  }
+});
+nextBtn.addEventListener('click', () => {
+  studentSentences[flashcardIndex] = exampleInput.value.trim();
+
+if (flashcardIndex < vocabPairs.length - 1) {
+  flashcardIndex++;
+  updateFlashcard();
+}
+
+  else { showScoreboard(); }
+});
+finishBtn.addEventListener('click', showScoreboard);
+
+function showScoreboard() {
+  const name = nameEl.value.trim() || 'Unknown';
+  const sid = idEl.value.trim() || 'N/A';
+  const now = new Date();
+  const formattedDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  let output = `flashcards.txt|${name}|${sid}|${formattedDate}\n\n`;
+  vocabPairs.forEach((p,i)=> output += `${i+1}. ${p.word}: ${studentSentences[i] || '[No sentence]'}\n`);
+  scoreOutput.textContent = output;
+  scoreboard.style.display = 'block';
+}
+
+// Copy / Download / PNG
+document.getElementById('copyBtn').addEventListener('click', ()=> navigator.clipboard.writeText(scoreOutput.textContent).then(()=>alert('Copied!'))); 
+document.getElementById('downloadTextBtn').addEventListener('click', ()=> {
+  const blob = new Blob([scoreOutput.textContent],{type:'text/plain'}); 
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'vocab_sentences.txt'; a.click();
+});
+document.getElementById('downloadPngBtn').addEventListener('click', ()=> {
+  const btnGroup = document.getElementById('scoreBtns'); btnGroup.style.display='none';
+  html2canvas(scoreboard).then(canvas=> { btnGroup.style.display='flex'; const link=document.createElement('a'); link.download='vocab_sentences.png'; link.href=canvas.toDataURL('image/png'); link.click(); });
+});
+
+
+</script>
+
+<script>
+const borderDiv = document.createElement('div');
+borderDiv.style.position = 'fixed';
+borderDiv.style.inset = '0';
+borderDiv.style.border = '10px solid #39FF14';
+borderDiv.style.padding = '20px';
+borderDiv.style.boxSizing = 'border-box';
+borderDiv.style.zIndex = '9999';
+borderDiv.style.pointerEvents = 'none';
+document.body.appendChild(borderDiv);
+</script>
+
+<script>
+(function () {
+  const synth = window.speechSynthesis;
+  let utterance = null;
+  let speaking = false;
+  let paused = false;
+
+  const vocabHeader = document.getElementById("vocabHeader");
+  const vocabList = document.getElementById("vocabList");
+
+  function stripEmojis(text) {
+    return text.replace(/[\p{Emoji}\p{Extended_Pictographic}]/gu, "").trim();
+  }
+
+  function getTextToRead() {
+    if (vocabList.style.display !== "none") {
+      const header = "Signal Words";
+      const items = [...vocabList.querySelectorAll("li")].map(li => stripEmojis(li.innerText)).join(". ");
+      return header + items;
+    }
+    const word = stripEmojis(document.querySelector("#flashcard .front")?.innerText || "");
+    const def = stripEmojis(document.querySelector("#flashcard .back")?.innerText || "");
+    return `${word}. ${def}`;
+  }
+
+  function createUtterance(text) {
+    if (!text) return null;
+    const u = new SpeechSynthesisUtterance(stripEmojis(text));
+    u.onend = () => { speaking = false; paused = false; };
+    return u;
+  }
+
+  function startReading() {
+    if (paused) { synth.resume(); paused = false; return; }
+    if (!speaking) {
+      const text = getTextToRead();
+      utterance = createUtterance(text);
+      if (!utterance) return;
+      synth.speak(utterance);
+      speaking = true;
+    }
+  }
+
+  function togglePause() { if (!speaking) return; paused ? synth.resume() : synth.pause(); paused = !paused; }
+  function restartReading() { if (speaking) synth.cancel(); paused = false; speaking = false; startReading(); }
+  function stopSpeech() { synth.cancel(); speaking = false; paused = false; }
+  window.stopSpeech = stopSpeech;
+
+  function ensureControlsExist() {
+    const nav = document.getElementById("navButtons");
+    if (!nav) return;
+    let controls = document.getElementById("inlineAudioControls");
+    if (controls) return controls;
+
+    controls = document.createElement("div");
+    controls.id = "inlineAudioControls";
+    controls.style.display = "none";
+    controls.style.gap = "8px";
+    controls.style.marginLeft = "auto";
+    controls.style.alignItems = "center";
+
+    const btns = [
+      { text: "⏮️", title: "Restart", action: restartReading },
+      { text: "⏸️", title: "Pause/Resume", action: togglePause },
+      { text: "▶️", title: "Start", action: startReading }
+    ];
+
+    btns.forEach(b => {
+      const btn = document.createElement("button");
+      btn.innerText = b.text;
+      btn.title = b.title;
+      btn.style.padding = "6px 12px";
+      btn.style.fontSize = "14px";
+      btn.style.borderRadius = "6px";
+      btn.style.background = "#1976d2";
+      btn.style.color = "#fff";
+      btn.style.border = "none";
+      btn.style.cursor = "pointer";
+      btn.addEventListener("click", b.action);
+      controls.appendChild(btn);
+    });
+
+    nav.appendChild(controls);
+    return controls;
+  }
+
+  const controls = ensureControlsExist();
+  function syncControls() {
+    const isOpen = vocabList.style.display !== "none";
+    stopSpeech();
+    controls.style.display = isOpen ? "flex" : "none";
+  }
+
+  const observer = new MutationObserver(syncControls);
+  observer.observe(vocabList, { attributes: true, attributeFilter: ["style"] });
+  syncControls();
+
+})();
+</script>
+
+
+<script>
+(async function() {
+  'use strict';
+
+  // Sanitize filenames for download
+  function sanitizeFilename(name) {
+    return name.trim()
+      .replace(/[\\/:*?"<>|]+/g, '_')
+      .replace(/[\r\n]+/g, '_')
+      .slice(0, 200) || 'score';
+  }
+
+  function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 2000);
+  }
+
+  async function downloadScoreAsPNG(text, filename) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = text.replace(/\n/g, '<br>');
+    wrapper.style.whiteSpace = 'pre-wrap';
+    wrapper.style.fontFamily = 'monospace';
+    wrapper.style.padding = '10px';
+    wrapper.style.backgroundColor = '#fff';
+    wrapper.style.color = '#000';
+    document.body.appendChild(wrapper);
+
+    try {
+      const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#fff' });
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      downloadBlob(blob, filename);
+    } catch (err) {
+      console.error(err);
+      alert('PNG download failed');
+    } finally {
+      wrapper.remove();
+    }
+  }
+
+  function hijackButton(button, getScoreText, getFilename, isText) {
+    if (!button) return;
+    const newBtn = button.cloneNode(true);
+    button.parentNode.replaceChild(newBtn, button);
+
+    newBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      const scoreText = getScoreText();
+      if (!scoreText) {
+        alert('No scoreboard data found. Complete the activity first.');
+        return;
+      }
+
+      const filename = sanitizeFilename(getFilename());
+      if (isText) {
+        downloadBlob(new Blob([scoreText], { type: 'text/plain' }), filename + '.txt');
+      } else {
+        await downloadScoreAsPNG(scoreText, filename + '.png');
+      }
+    }, true);
+  }
+
+  // Scoreboard elements
+  const scoreOutput = document.getElementById('scoreOutput');
+  const nameEl = document.getElementById('name');
+  const idEl = document.getElementById('studentId');
+
+  // Function to generate dynamic filename
+  const getFilename = () => {
+    const rawFilename = window.location.pathname.split('/').pop() || 'flashcards';
+    const name = nameEl?.value.trim() || 'Student';
+    const id = idEl?.value.trim() || 'ID';
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2,'0')}${String(now.getMonth()+1).padStart(2,'0')}${now.getFullYear()}`;
+    return `${rawFilename}|${name}|${id}|${dateStr}`;
+  };
+
+  // Hijack buttons
+  const copyBtn = document.getElementById('copyBtn');
+  const downloadTextBtn = document.getElementById('downloadTextBtn');
+  const downloadPngBtn = document.getElementById('downloadPngBtn');
+
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = scoreOutput.textContent.trim();
+      if (!text) { alert('No scoreboard data found.'); return; }
+      navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+    });
+  }
+
+  hijackButton(downloadTextBtn, () => scoreOutput.textContent.trim(), getFilename, true);
+  hijackButton(downloadPngBtn, () => scoreOutput.textContent.trim(), getFilename, false);
+
+})();
+</script>
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  /* ===============================
+     1. SUPABASE SETUP
+     =============================== */
+  const supabase = window.supabase.createClient(
+    "https://rhmbuqwbjacvbobxmyvx.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJobWJ1cXdiamFjdmJvYnhteXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDkyNzAsImV4cCI6MjA4MTEyNTI3MH0.lcSeTgeFAr-I286W9yXEGxWmqGAP5fZPV9jsaaCvTY8"
+  );
+
+  /* ===============================
+     2. READ SCOREBOARD FROM DOM
+     =============================== */
+  function readScoreboard() {
+    const filename = document.getElementById("fileNameOutput")?.textContent || null;
+    const student_name = document.getElementById("userNameOutput")?.textContent || null;
+    const student_id = document.getElementById("userIdOutput")?.textContent || null;
+
+    const scoreText = document.getElementById("scoreOutput")?.textContent || "";
+    const match = scoreText.match(/(\d+)\/(\d+)\s+\(([\d.]+)%\)/);
+
+    return {
+      filename,
+      student_name,
+      student_id,
+      score: match ? Number(match[1]) : null,
+      percentage_correct: match ? Number(match[3]) : null,
+      extra_data: {
+        page: window.location.pathname,
+        sections: Array.from(
+          document.querySelectorAll(".section-score")
+        ).map(el => el.textContent)
+      }
+    };
+  }
+
+  /* ===============================
+     3. INSERT INTO SUPABASE
+     =============================== */
+  async function saveScoreboard() {
+    const row = readScoreboard();
+
+    console.log("📤 Sending to Supabase:", row);
+
+    const { data, error } = await supabase
+      .from("student_scores")
+      .insert([{
+        ...row,
+        date: new Date().toISOString()
+      }])
+      .select();
+
+    if (error) {
+      console.error("❌ Supabase insert failed:", error);
+    } else {
+      console.log("✅ Supabase insert success:", data);
+    }
+  }
+
+  /* ===============================
+     4. AUTO-HOOK INTO SUBMIT BUTTON
+     =============================== */
+  document.addEventListener("DOMContentLoaded", () => {
+    const submitBtn = document.getElementById("submitBtn");
+
+    if (!submitBtn) {
+      console.warn("⚠️ submitBtn not found");
+      return;
+    }
+
+    submitBtn.addEventListener("click", async () => {
+      // Wait a tick so scoreboard finishes rendering
+      setTimeout(saveScoreboard, 300);
+    });
+
+    console.log("✅ Supabase scoreboard auto-save active");
+  });
+
+})();
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // Get filename only
+    let filename = window.location.pathname.split("/").pop();
+
+    // Remove .html
+    filename = filename.replace(/\.html$/i, "");
+
+    // Remove everything up to and including the first underscore
+    // (treats that as the prefix)
+    filename = filename.replace(/^[^_]*_/, "");
+
+    // Convert underscores to spaces
+    const title = filename.replace(/_/g, " ");
+
+    // Replace the first <h1>
+    const h1 = document.querySelector("h1");
+    if (h1) {
+        h1.textContent = title;
+    }
+});
+</script>
+
+<script>
+
+(function(){
+
+/* =========================
+   RAW INSTRUCTIONS TEXT
+========================= */
+
+const RAW_TEXT = `
+
+How to use this page...
+
+1. Enter Name and ID.
+2. Select a category to view the main list.
+3. Use the audio controls to hear the main list read aloud.
+4. Click to hide the main list.
+5. Click on the flash cards to show the front or the back.
+5. Click next or previous to go froward or backward through the cards.
+6. Enter example sentences for each word in the text field.
+7. Click Submit to view your example sentences when you are done.
+8. Click to copy or download your example sentences.
+
+`;
+
+
+/* =========================
+   RAW TEXT PARSER
+========================= */
+
+function parseRawInstructions(text){
+
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const html = [];
+
+  lines.forEach(line => {
+
+    if(line === "---"){
+      html.push(`<hr>`);
+      return;
+    }
+
+    if(/^\d+\./.test(line)){
+      html.push(`<p>${line}</p>`);
+      return;
+    }
+
+    if(!/[.!?:]$/.test(line)){
+      html.push(`<h3>${line}</h3>`);
+      return;
+    }
+
+    html.push(`<p>${line}</p>`);
+  });
+
+  return html.join("");
+}
+
+
+/* =========================
+   CREATE STYLE
+========================= */
+
+const style = document.createElement("style");
+
+style.textContent = `
+#instructionsBtn{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  padding:10px 16px;
+  background:#2e8b57;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 4px 8px rgba(0,0,0,0.6);
+  z-index:99998;
+}
+
+#instructionsBtn:hover{
+  background:#257047;
+}
+
+#instructionsRoot{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:99999;
+}
+
+#instructionsBackdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.35);
+}
+
+#instructionsModal{
+  position:absolute;
+  top:25px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(650px,90vw);
+  max-height:90vh;
+  background:#fff;
+  border-radius:10px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+#instructionsHeader{
+  padding:12px 16px;
+  border-bottom:1px solid #ddd;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+#instructionsTitle{
+  color:#1976d2;
+  font-weight:600;
+  font-size:1.1em;
+}
+
+#instructionsBack{
+  border:none;
+  background:none;
+  font-size:20px;
+  cursor:pointer;
+  color:#1976d2;
+  font-weight:600;
+}
+
+#instructionsContent{
+  padding:2px 18px 18px 18px;
+  overflow-y:auto;
+  line-height:1.6;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+
+#instructionsContent::-webkit-scrollbar{
+  display:none;
+}
+
+#instructionsContent h3{
+  color:#1976d2;
+  margin:12px 0 4px 0;
+  font-weight:600;
+}
+
+#instructionsContent p{
+  margin:4px 0;
+}
+
+#instructionsContent hr{
+  margin:12px 0;
+}
+`;
+
+document.head.appendChild(style);
+
+
+/* =========================
+   CREATE BUTTON
+========================= */
+
+const btn = document.createElement("button");
+btn.id = "instructionsBtn";
+btn.textContent = "Instructions";
+
+document.body.appendChild(btn);
+
+
+/* =========================
+   CREATE MODAL
+========================= */
+
+const root = document.createElement("div");
+root.id = "instructionsRoot";
+
+root.innerHTML = `
+<div id="instructionsBackdrop"></div>
+
+<div id="instructionsModal">
+
+  <div id="instructionsHeader">
+    <button id="instructionsBack">←</button>
+    <span id="instructionsTitle">Instructions</span>
+  </div>
+
+  <div id="instructionsContent">
+    ${parseRawInstructions(RAW_TEXT)}
+  </div>
+
+</div>
+`;
+
+document.body.appendChild(root);
+
+
+/* =========================
+   SCROLL LOCK
+========================= */
+
+const modalContent = document.getElementById("instructionsContent");
+
+modalContent.addEventListener("wheel", e=>{
+  e.stopPropagation();
+},{passive:false});
+
+modalContent.addEventListener("touchmove", e=>{
+  e.stopPropagation();
+},{passive:false});
+
+
+/* =========================
+   OPEN / CLOSE
+========================= */
+
+function openModal(){
+  root.style.display="block";
+  document.body.style.overflow="hidden";
+  document.documentElement.style.overflow="hidden";
+}
+
+function closeModal(){
+  root.style.display="none";
+  document.body.style.overflow="";
+  document.documentElement.style.overflow="";
+}
+
+btn.onclick = openModal;
+
+document.getElementById("instructionsBack").onclick = closeModal;
+document.getElementById("instructionsBackdrop").onclick = closeModal;
+
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") closeModal();
+});
+
+/* =========================
+   DYNAMIC BODY PADDING FOR BUTTON
+========================= */
+
+function adjustBodyPadding(){
+  const btnHeight = btn.offsetHeight + -25; // include some gap
+  document.body.style.paddingBottom = `${btnHeight}px`;
+}
+
+// Initial adjustment
+adjustBodyPadding();
+
+// Update if window is resized (responsive)
+window.addEventListener("resize", adjustBodyPadding);
+
+})();
+</script>
+
+<script>
+(function() {
+  // Prevent pinch-to-zoom
+  function preventPinch(e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }
+
+  // Prevent double-tap zoom
+  let lastTouchTime = 0;
+  function preventDoubleTap(e) {
+    const now = Date.now();
+    if (now - lastTouchTime < 300) {
+      e.preventDefault();
+    }
+    lastTouchTime = now;
+  }
+
+  // Block gesture events on iOS
+  function preventGesture(e) {
+    e.preventDefault();
+  }
+
+  document.addEventListener('touchstart', preventPinch, { passive: false });
+  document.addEventListener('touchend', preventDoubleTap, { passive: false });
+  document.addEventListener('gesturestart', preventGesture, { passive: false });
+})();
+</script>
+
+</body>
+</html>
+
+
+
+
+
+

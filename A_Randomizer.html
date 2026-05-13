@@ -39,7 +39,7 @@ html, body {
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: 16px;
+  font-size: 12px;
   text-align: center;
   user-select: none;
   cursor: pointer;
@@ -112,178 +112,284 @@ html, body {
 
 <!-- Raw text blocks -->
 <pre id="rawText1" class="rawText">
-|11.1|
-Phapmuan
-KornKamol
-Piyawarin
-Karn
-Thanisorn
-Songsathit
-Nanon
-Prachaya
-Chayakarn
-Atis
-Thanapat
-Arichai
-Puripat
-Withawich
-Papeem
-Theeraphat
-</pre>
-<pre id="rawText2" class="rawText">
-|12.2|
-Piyanun
-Achiravit
-Thanatphat
-Puttipat
-Papon
-Wongsapat
-Phunakorn
-Supatat
-Sukhaphat
-Parnasarn
-Athiwat
-Akrit
-Teerapich
-Techin
-Akkhardwin
-</pre>
-<pre id="rawText3" class="rawText">
-|13.3|
-Chinpasut
-Pavee
-Warawat
-Tanaphon
-Supasan
-Nathavee
-Kuariwin
-Kantaphon
-Patawee
-Kittitee
-Kawinpob
-Phuthaninphat
-Chinnawat
-Phupa
-Phattadon
-</pre>
-<pre id="rawText4" class="rawText">
-|15.1|
-Theetat
-Pitchayapoom
-Thanakorn​
-Pannathorn
-Nunthapat
-Thanadech
-Noppathorn
-Supakorn
-Krittaphat
-Nuttapong
-Pudh
-Aritouch
-Tanaphat
-Mangkorn
-Ketkludoyoo
-</pre>
-<pre id="rawText5" class="rawText">
-|17.2|
-Pasit
-Denthanat
-Ronnakrit
-Phurithat
-Thanatthat
-Sanant
-Korrerk
-Theetat
-Pothsawee
-Kanoknat
-Patit
-Korapat
-Krittitee
-Pakorn
-Kanapos
-Tashtada
+~11.1	
+Blue	THANAWAT
+Blue	WARAWUT
+Blue	PHAWAT
+Green	SUPHAJAK
+Green	KALLAPAPRUEK
+Green	SORAPHAT
+Orange	NACHAROT
+Orange	PAPHAWIN
+Orange	PATTARADORN
+Orange	THEERAPITH
+Red	THANNAKORN
+Red	KHEMMANAT
+Red	PANNAWIT
+Red	CHATCHANOK
+~13.2	
+Blue	PATIPHAN
+Blue	KATANYU
+Blue	SUTHIMONT
+Green	KORRAVIT
+Green	MACHAT
+Green	PHOOMIPAT
+Orange	INGKRIT
+Orange	PACHARA
+Orange	KHANAPHOT
+Orange	NAPOL
+Red	KANNAPHAT
+Red	NATTHAPAKORN
+Red	PHURIT
+Red	PAWARUT
+~14.1	
+Blue	KRITTANART
+Blue	NATTHANAN
+Blue	NANARUCHOTE
+Green	PHUTTHIPHAT
+Green	BOONRAKSA
+Green	KRONPANOD
+Orange	PHUDIT
+Orange	DHATSAWITT
+Orange	NONTHAPAT
+Orange	CHAYANGKOON
+Orange	PUNYAWEE
+Red	YUTTANIN
+Red	PHOTSAWEE
+Red	JOMMANUT
+Red	PHURARIT
+~15.3	
+Blue	AKKRAVICH
+Blue	THANAKORN
+Blue	PUNNAWAT
+Green	PURI
+Green	API CHA
+Green	PANYARAT
+Orange	NAKARIN
+Orange	CHANANON
+Orange	46953
+Orange	46958
+Red	47035
+Red	47064
+Red	47074
+Red	47086
+~16.2	
+Blue	VACHIRASAK
+Blue	CHUTIPAN
+Blue	PAKORNPAT
+Green	PANPURIS
+Green	KOONWICH
+Green	NUTPHALOD
+Orange	JIRAYU
+Orange	SETTHAWUT
+Orange	THEERAPATCH
+Orange	46923
+Red	46924
+Red	46930
+Red	46934
+Red	46939
+
 </pre>
 
 <script>
 // --- Utility functions ---
+
 function randomPastelColor() { 
   return 'hsl(' + Math.floor(Math.random()*360) + ',70%,80%)'; 
 }
+
 function shuffleArray(arr) {
+
   const a = arr.slice();
-  for(let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
+
+  for(let i = a.length - 1; i > 0; i--) {
+
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [a[i], a[j]] = [a[j], a[i]];
   }
+
   return a;
 }
 
-// --- Enhanced spin animation ---
-function spinElement(element, items, indexRef, fastStart=false){
+/* =========================
+   PARSE NEW RAW FORMAT
+========================= */
+
+function parseRawClasses(raw) {
+
+  const result = {};
+
+  const blocks = raw.split(/(?=~)/g);
+
+  blocks.forEach(block => {
+
+    block = block.trim();
+
+    if (!block.startsWith("~")) return;
+
+    const lines = block
+      .split("\n")
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const className = lines[0].replace("~", "").trim();
+
+    const names = [];
+
+    for (let i = 1; i < lines.length; i++) {
+
+      const parts = lines[i].split(/\s+/);
+
+      if (parts.length < 2) continue;
+
+      // ignore team color
+      const studentName = parts.slice(1).join(" ");
+
+      names.push(studentName);
+    }
+
+    result[className] = names;
+  });
+
+  return result;
+}
+
+/* =========================
+   SPIN ANIMATION
+========================= */
+
+function spinElement(element, items, indexRef, fastStart = false){
+
   element.classList.add('spinning');
+
   element.style.transform = 'rotate(0deg)';
-  
+
   let angle = 0;
-let speed = fastStart ? 100 : 50;
-const accel = 1.15;
-const maxSpeed = fastStart ? 1500 : 1200;
-const slowdown = 0.85;
+
+  let speed = fastStart ? 100 : 50;
+
+  const accel = 1.15;
+
+  const maxSpeed = fastStart ? 1500 : 1200;
+
+  const slowdown = 0.85;
+
   let spinningUp = true;
 
   function step(){
+
     if(spinningUp){
+
       speed *= accel;
+
       angle += speed;
-      if(speed >= maxSpeed) spinningUp = false;
+
+      if(speed >= maxSpeed) {
+        spinningUp = false;
+      }
+
     } else {
+
       speed *= slowdown;
+
       angle += speed;
+
       if(speed < 2){
-        angle = Math.round(angle/360)*360;
-        element.style.transform = 'rotate('+angle+'deg)';
+
+        angle = Math.round(angle / 360) * 360;
+
+        element.style.transform = 'rotate(' + angle + 'deg)';
+
         element.classList.remove('spinning');
-        indexRef.current = (indexRef.current+1)%items.length;
+
+        indexRef.current++;
+
+        /* reshuffle after all names used */
+
+        if(indexRef.current >= items.length){
+
+          const reshuffled = shuffleArray(items);
+
+          items.length = 0;
+
+          items.push(...reshuffled);
+
+          indexRef.current = 0;
+        }
+
         element.textContent = items[indexRef.current];
+
         element.style.background = randomPastelColor();
+
         return;
       }
     }
-    element.style.transform = 'rotate('+angle+'deg)';
+
+    element.style.transform = 'rotate(' + angle + 'deg)';
+
     requestAnimationFrame(step);
   }
+
   step();
 }
 
-// --- Setup ---
+/* =========================
+   SETUP
+========================= */
+
 const buttonContainer = document.getElementById('buttonContainer');
+
 const topCircle = document.getElementById('topCircle');
-const rawPreList = [rawText1, rawText2, rawText3, rawText4, rawText5];
+
+/* only use rawText1 now */
+
+const raw = document.getElementById("rawText1").textContent;
+
+const classes = parseRawClasses(raw);
 
 let activeItems = [];
-let activeIndex = {current: 0};
 
-rawPreList.forEach((pre) => {
-  const lines = pre.textContent.trim().split("\n").map(s=>s.trim()).filter(s=>s);
-  const labelLine = lines.shift();
-  const label = labelLine.replace(/\|/g,'');
+let activeIndex = { current: 0 };
+
+/* =========================
+   CREATE CLASS BUTTONS
+========================= */
+
+Object.keys(classes).forEach(className => {
 
   const btn = document.createElement('button');
+
   btn.className = 'popupBtn';
-  btn.textContent = label;
-  
+
+  btn.textContent = className;
+
   btn.addEventListener('click', () => {
-    activeItems = shuffleArray(lines);
-    activeIndex = {current: Math.floor(Math.random()*activeItems.length)};
+
+    activeItems = shuffleArray(classes[className]);
+
+    activeIndex = {
+      current: Math.floor(Math.random() * activeItems.length)
+    };
+
     topCircle.textContent = activeItems[activeIndex.current];
+
     topCircle.style.background = randomPastelColor();
+
     spinElement(topCircle, activeItems, activeIndex, true);
   });
 
   buttonContainer.appendChild(btn);
 });
 
+/* =========================
+   CLICK TOP CIRCLE
+========================= */
+
 topCircle.addEventListener('click', () => {
+
   if(activeItems.length > 0){
+
     spinElement(topCircle, activeItems, activeIndex, true);
   }
 });

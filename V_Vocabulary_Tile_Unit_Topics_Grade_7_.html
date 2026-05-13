@@ -17,8 +17,13 @@ body {
   color: #222;
 }
 
-
+#layout::before {
+  content: "";
+  display: block;
+  height: 10px;
+}
 #layout {
+
   max-width: 400px;      /* use EXACT value your game area needs */
   margin: 0 auto;
   padding: 0 6px;
@@ -913,194 +918,63 @@ span.highlighted::selection {
   padding: 10px;
   font-size: 8px;
 }
-</style>
 
+
+/* Game board hidden before start */
+.game-board {
+  visibility: hidden;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.game-board.active {
+  visibility: visible;
+  height: auto;
+}
+
+function parseVocabInput(text){
+  const lines = text.trim().split('\n');
+  const pairs = [];
+
+  // Broad but SAFE emoji range (no Unicode properties)
+  const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu;
+
+  for(let i = 0; i < lines.length; i++){
+    const line = lines[i].trim();
+    if(!line) continue;
+
+if(/[-–]/.test(line)){      let [wordPart, defPart] = line.split(/\s*[-–]\s*/);
+
+      // Remove bullet + emojis ONLY from word
+      wordPart = wordPart
+        .replace(/^•\s*/, '')
+        .replace(EMOJI_REGEX, '')
+        .trim();
+
+      const definition = defPart.split('<br>')[0].trim();
+
+      pairs.push({ word: wordPart, definition });
+    }
+  }
+
+  return pairs;
+}
+
+
+</style>
 
 </head>
 <body>
 
-<span style="display: inline-block; transform: scaleX(-1);">🛵</span>
+<!-- <span style="display: inline-block; transform: scaleX(-1);">🛵</span> -->
 
 
 
 <div id="layout">
   <!--<div class="header-bar">Lesson</div> -->
-
-  <!-- Reading Section -->
-  <section id="readingSection">
-    <h3>Lesson Dialog</h3>
-    <div class="top-bar">
-      <input type="text" id="readingName" placeholder="Name">
-      <input type="text" id="readingId" placeholder="ID Number">
-      <button id="readingSubmitBtn" disabled>Submit</button>
-    </div>
-    <div style="position:relative;">
-      <div id="text1" contenteditable="true"></div>
-      <div id="readingCounter">0</div>
-    </div>
-    <div class="scoreboard" id="readingScoreboard"><pre id="readingScoreOutput"></pre>
-      <div class="action-buttons">
-        <button id="readingCopyScoreBtn">Copy</button>
-        <button id="readingDownloadTextBtn">↓TXT</button>
-        <button id="readingDownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </section>
-
-
-
-  <!-- Multiple Choice Section -->
-  <section id="mcSection">
-    <h3>Concept Quiz</h3>
-    <div class="top-bar">
-      <input type="text" id="mcName" placeholder="Name">
-      <input type="text" id="mcId" placeholder="ID Number">
-      <button id="mcSubmitBtn" disabled>Submit</button>
-    </div>
-    <div id="mcContainer"></div>
-    <div class="scoreboard" id="mcScoreboard"><pre id="mcScoreOutput"></pre>
-      <div class="action-buttons">
-        <button id="mcCopyBtn">Copy</button>
-        <button id="mcDownloadTextBtn">↓TXT</button>
-        <button id="mcDownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- Multiple Choice Section 2-->
-  <section id="mc2Section">
-    <h3>Context Quiz</h3>
-    <div class="top-bar">
-      <input type="text" id="mc2Name" placeholder="Name">
-      <input type="text" id="mc2Id" placeholder="ID Number">
-      <button id="mc2SubmitBtn" disabled>Submit</button>
-    </div>
-    <div id="mc2Container"></div>
-    <div class="scoreboard" id="mc2Scoreboard"><pre id="mc2ScoreOutput"></pre>
-      <div class="action-buttons">
-        <button id="mc2CopyBtn">Copy</button>
-        <button id="mc2DownloadTextBtn">↓TXT</button>
-        <button id="mc2DownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </section>
-
-
-
-
-  <!-- True/False Section -->
-  <!--   <section id="tfSection">
-    <h3>True / False</h3>
-    <div class="top-bar">
-      <input type="text" id="tfName" placeholder="Name">
-      <input type="text" id="tfId" placeholder="ID Number">
-      <button id="tfSubmitBtn" disabled>Submit</button>
-    </div>
-    <div id="tfContainer"></div>
-    <div class="scoreboard" id="tfScoreboard"><pre id="tfScoreOutput"></pre>
-      <div class="action-buttons">
-        <button id="tfCopyBtn">Copy</button>
-        <button id="tfDownloadTextBtn">↓TXT</button>
-        <button id="tfDownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </section> -->
-
-  <!-- Fill-in-the-Blank Section -->
-<section id="fibSection">
-    <h3>Fill-in-the-Blank</h3>
-    <div class="top-bar">
-      <input type="text" id="fibName" placeholder="Name">
-      <input type="text" id="fibId" placeholder="ID Number">
-      <button id="fibSubmitBtn" disabled>Submit</button>
-    </div>
-    <div id="fibContainer"></div>
-    <div class="scoreboard" id="fibScoreboard"><pre id="fibScoreOutput"></pre>
-      <div class="action-buttons">
-        <button id="fibCopyBtn">Copy</button>
-        <button id="fibDownloadTextBtn">↓TXT</button>
-        <button id="fibDownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </section>
-
-
-
-  <!-- Scramble Section -->
-    <section id="scrambleSection">
-    <h3>Scramble</h3>
-    <div class="top-bar">
-      <input type="text" id="scrambleName" placeholder="Name">
-      <input type="text" id="scrambleId" placeholder="ID Number">
-      <button id="scrambleSubmitBtn" disabled>Submit</button>
-    </div>
-    <div id="scrambleContainer"></div>
-    <div class="scoreboard" id="scrambleScoreboard"><pre id="scrambleScoreOutput"></pre>
-      <div class="action-buttons">
-        <button id="scrambleCopyBtn">Copy</button>
-        <button id="scrambleDownloadTextBtn">↓TXT</button>
-        <button id="scrambleDownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- Sequence Section -->
-    <section id="sequenceSection">
-    <h3>Sequence of Events</h3>
-    <div class="top-bar">
-      <input type="text" id="sequenceName" placeholder="Name">
-      <input type="text" id="sequenceId" placeholder="ID Number">
-      <button id="sequenceSubmitBtn" disabled>Submit</button>
-    </div>
-    <div id="sequenceContainer"></div>
-    <div class="scoreboard" id="sequenceScoreboard"><pre id="sequenceScoreOutput"></pre>
-      <div class="action-buttons">
-        <button id="sequenceCopyBtn">Copy</button>
-        <button id="sequenceDownloadTextBtn">↓TXT</button>
-        <button id="sequenceDownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </section>
-
-
-<!-- Parts of Speech Quiz Section -->
-<section id="posSection">
-  <h3>Parts of Speech Quiz</h3>
-
-  <div class="top-bar">
-    <input type="text" id="name" placeholder="Enter your name">
-    <input type="text" id="id" placeholder="Enter your ID">
-    <button id="grammarsubmit" disabled>Submit</button>
-  </div>
-
-  <div class="section">
-    <h4>Instructions</h4>
-    <div id="instructions"></div>
-  </div>
-
-  <div class="section quiz-container">
-    <h4>Quiz: Identify Parts of Speech</h4>
-    <div id="exercises"></div>
-  </div>
-
-
-  <div class="section">
-    <div id="scoreboardContainer" style="display: none;">
-<div id="score" style="display: none;"></div>
-
-      <div id="score"></div>
-      <div id="result"></div>
-
-      <div class="action-buttons" id="scoreboardBtns" style="display: none;">
-        <button id="grammarCopyBtn">Copy</button>
-        <button id="grammarDownloadTxtBtn">↓TXT</button>
-        <button id="grammarDownloadPngBtn">↓PNG</button>
-      </div>
-    </div>
-  </div>
-</section>
 
   <!-- Vocabulary Tiles -->
 
@@ -1114,10 +988,23 @@ span.highlighted::selection {
     <button id="vocabSubmitBtn" disabled>Submit</button>
   </div>
 
-  <div class="game-board">
-    <div class="column" id="wordTiles"></div>
-    <div class="column" id="definitionTiles"></div>
+
+
+<div class="formRow">
+  <button type="button" id="sectionUp">▲</button>
+
+  <div id="sectionWheelContainer">
+    <div class="wheel"></div>
   </div>
+
+  <button type="button" id="sectionDown">▼</button>
+
+    <button
+      type="button"
+      id="sectionStart"
+      disabled
+    >Start</button>
+</div>
 
   <div id="vocabScoreboard">
     <pre id="vocabScoreOutput"></pre>
@@ -1127,37 +1014,16 @@ span.highlighted::selection {
       <button id="vocabDownloadPngBtn">↓PNG</button>
     </div>
   </div>
+
+  <div class="game-board">
+    <div class="column" id="wordTiles"></div>
+    <div class="column" id="definitionTiles"></div>
+  </div>
+
+
 </section>
 
 
-
-
-  <!-- GHOST WRI Section -->
-<section id="writingSectionGhostWriting" class="writing-section">
-  <div class="header-bar">
-    <h3>Ghost Writing</h3>
-  </div>
-
-  <div class="inline-inputs">
-    <input type="text" id="writingName" placeholder="Name" required>
-    <input type="text" id="writingId" placeholder="ID Number" required>
-    <button type="button" id="writingSubmitBtn" disabled>Submit</button>
-  </div>
-
-  <div class="textarea-wrapper">
-    <textarea id="writingInput" placeholder="Start writing here..." required></textarea>
-    <div id="writingCounter" class="counter">0 characters | ~0 sentences</div>
-  </div>
-
-  <div id="writingScoreboard" class="writing-scoreboard" style="display: none;">
-    <pre id="writingScoreOutput"></pre>
-    <div class="button-container">
-      <button id="writingCopyBtn">Copy</button>
-      <button id="writingDownloadTextBtn">↓Text</button>
-      <button id="writingDownloadPngBtn">↓PNG</button>
-    </div>
-  </div>
-</section>
 
   <!-- Copyright Footer Section -->
   <section id="copyrightSection">
@@ -1165,13 +1031,13 @@ span.highlighted::selection {
   </section>
 
 <!-- Floating read-aloud control bar -->
-<div id="readaloudControls">
+<!-- <div id="readaloudControls">
   <button id="highlightSelected">Highlight</button>
   <button id="copySelected">Copy</button>
   <button id="restartBtn">&#x25C0;</button>
   <button id="pauseResumeBtn">||</button>
   <button id="startBtn">&#x25B6;</button>
-</div>
+</div> -->
 
 <script>
 /* =========================================
@@ -1296,993 +1162,648 @@ pngBtn.addEventListener('click', () => {
 });
 }
 </script>
-<script>
-// ---------------------- READING ----------------------
-const rawTextSource = `
-Teacher: Open your textbook to page 42.
-Student: Do we need a pencil?
-Teacher: Yes, take notes.
-
-Section 1 – Bigfoot – Pacific Northwest
-
-“Good morning, everyone. Today, we are starting our Bigfoot search deep in the Pacific Northwest forest, where people often report some huge footprints and some strange sounds. Right now, we are moving toward a trail that is usually quiet, and we are listening carefully for any movement. We don’t have much daylight, so we will continue until late afternoon, and we won’t stop unless the weather gets bad.
-
-Maybe we will see a broken branch or a fresh print. If we find some real evidence, we will definitely follow it. Bigfoot is as mysterious as the Yeti, but the trees here are thicker, so the creature could hide more easily. Because of the dense forest, sightings are rare, yet locals still tell some exciting stories. Once we reach the river, we will rest, and later, we are going to use night-vision cameras.
-
-You should stay close to the group, and you must not wander away, because the forest is huge. I think we will probably hear some unusual sounds tonight, even if they come from animals we already know. Still, this place feels different from anywhere else, and that’s why our search is so thrilling.
-`;
-
-let rawText = "";
-let keystrokes = 0;
-let totalChars = 0;
-
-(async () => {
-  // ✅ Load raw text (inline or file)
-  rawText = await resolveRaw(rawTextSource);
-
-  const textEl = document.getElementById('text1');
-  const counterEl = document.getElementById('readingCounter');
-
-  // ✅ Populate text AFTER load
-  textEl.textContent = rawText;
-  totalChars = rawText.length;
-
-  // --- Auto-resize function ---
-  function autoResizeTextBox() {
-    textEl.style.height = 'auto';
-    textEl.style.height = (textEl.scrollHeight + 20) + 'px';
-  }
-
-  // --- Counter update function ---
-  function updateCounter() {
-    const percent = totalChars
-      ? ((keystrokes / totalChars) * 100).toFixed(1)
-      : '0.0';
-    counterEl.textContent = `Keystrokes: ${keystrokes} | Approx. Percent changed: ${percent}%`;
-  }
-
-  // --- Input event ---
-  textEl.addEventListener('input', () => {
-    keystrokes++;
-    updateCounter();
-    autoResizeTextBox();
-  });
-
-  // Initialize
-  updateCounter();
-  autoResizeTextBox();
-})();
-
-// --- Enable Submit Button ---
-enableButtonOnFill(
-  document.getElementById('readingName'),
-  document.getElementById('readingId'),
-  document.getElementById('readingSubmitBtn')
-);
-
-// --- Handle Submit ---
-document.getElementById('readingSubmitBtn').addEventListener('click', () => {
-  const filename = window.location.pathname.split('/').pop();
-  const nm = document.getElementById('readingName').value.trim();
-  const id = document.getElementById('readingId').value.trim();
-
-  const dateStr = new Date().toLocaleString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-
-  const percentChanged = totalChars
-    ? ((keystrokes / totalChars) * 100).toFixed(1)
-    : '0.0';
-
-  const scoreText =
-`${filename}|Reading|${nm}|${id}|${dateStr}|${keystrokes}keystrokes|${percentChanged}% changed
-
-${document.getElementById('text1').textContent.trim()}`;
-
-  const scoreOutput = document.getElementById('readingScoreOutput');
-  scoreOutput.textContent = scoreText;
-
-  document.getElementById('readingScoreboard').style.display = 'block';
-  document.getElementById('readingSubmitBtn').disabled = true;
-
-  setupCopyDownload(
-    scoreOutput,
-    document.getElementById('readingCopyScoreBtn'),
-    document.getElementById('readingDownloadTextBtn'),
-    document.getElementById('readingDownloadPngBtn'),
-    "reading_score"
-  );
-});
-</script>
-
-
-
-<script>
-// ---------------------- MULTIPLE CHOICE 1 (Dynamic, Pipe-based) ----------------------
-const mcRawSource = ` 
-Why do sightings of Bigfoot happen only sometimes in this forest?
-People walk too fast
-The river is too wide
-|The trees are thick and it is easy to hide|
-The forest has no animals
-
-What will the group do if they find real evidence?
-Leave the forest
-|Follow it|
-Stop the search
-Ask locals for help
-
-When will they rest during the day?
-As soon as the trail becomes noisy
-After lunch
-Before they reach the trail
-|When they arrive at the river|
-
-Why must students stay close to the group?
-The guide walks slowly
-It might rain
-|The forest is very large|
-They need to take many photos
-
-What makes the search feel “thrilling,” according to the speaker?
-The weather is dangerous
-|The forest feels different from other places|
-The group is very big
-They have new shoes
-`;
-
-const mcContainer = document.getElementById('mcContainer');
-
-(async () => {
-  const mcRaw = await resolveRaw(mcRawSource);
-
-  // Parse questions dynamically from pipe
-  const questions = mcRaw
-    .trim()
-    .split(/\n\s*\n/)
-    .map(block => {
-      const lines = block.trim().split('\n');
-      const qText = lines.shift().trim();
-      const opts = lines.map(l => l.trim());
-      const correctAnswer = opts.find(o => o.includes('|'))?.replace(/\|/g,'').trim();
-      const cleanOpts = opts.map(o => o.replace(/\|/g,'').trim());
-      return { q: qText, opts: cleanOpts, answer: correctAnswer };
-    });
-
-  // Render questions dynamically
-  questions.forEach((q, i) => {
-    const div = document.createElement('div');
-    div.className = 'exercise';        // for feedback system
-    div.dataset.correct = q.answer;    // correct answer comes from pipe
-    div.style.marginBottom = '6px';
-    div.innerHTML = `<strong>${i+1}.</strong> ${q.q}`;
-
-    q.opts.forEach(opt => {
-      const label = document.createElement('label');
-      label.style.display = 'block';
-
-      const input = document.createElement('input');
-      input.type = 'radio';
-      input.name = `mc-q${i}`;        // unique per question
-      input.value = opt;
-
-      label.appendChild(input);
-      label.append(` ${opt}`);
-      div.appendChild(label);
-    });
-
-    mcContainer.appendChild(div);
-  });
-
-
-
-// --- LOCK FIRST CLICK FOR SCORING (safe for feedback) ---
-mcContainer.querySelectorAll('.exercise').forEach(ex => {
-  const inputs = ex.querySelectorAll('input[type="radio"]');
-
-  inputs.forEach(input => {
-    input.addEventListener('click', () => {
-      // If question already locked for scoring, do nothing
-      if (ex.dataset.locked) return;
-
-      // Mark this question as locked
-      ex.dataset.locked = 'true';
-      
-      // Optional: store which option was first clicked
-      ex.dataset.firstSelected = input.value;
-    });
-  });
-});
-
-// ================= SCOPED MC1 SUBMIT ENABLE =================
-const mcBtn = document.getElementById('mcSubmitBtn');
-const mcName = document.getElementById('mcName');
-const mcId = document.getElementById('mcId');
-
-const mcCheck = () => mcBtn.disabled = !(mcName.value.trim() && mcId.value.trim());
-mcName.addEventListener('input', mcCheck);
-mcId.addEventListener('input', mcCheck);
-
-  // Initialize feedback after rendering
-  initFeedback("#mcContainer");
-
-  // Enable submit button once name/id are filled
-  enableButtonOnFill(
-    document.getElementById('mcName'),
-    document.getElementById('mcId'),
-    document.getElementById('mcSubmitBtn')
-  );
-})();
-
-// Submit handler
-document.getElementById('mcSubmitBtn').addEventListener('click', () => {
-  const filename = window.location.pathname.split('/').pop();
-  const nm = document.getElementById('mcName').value.trim();
-  const id = document.getElementById('mcId').value.trim();
-  const dateStr = new Date().toLocaleString('en-GB', {
-    day: '2-digit', month: '2-digit', year: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  });
-
-const exercises = mcContainer.querySelectorAll('.exercise');
-let score = 0;
-exercises.forEach(ex => {
-  const first = ex.dataset.firstSelected;   // first clicked option
-  if (first && first === ex.dataset.correct) score++;
-});
-
-  const percent = exercises.length ? ((score/exercises.length)*100).toFixed(1) : '0.0';
-  const scoreText = `${filename}|Concept Quiz|${nm}|${id}|${dateStr}|${score}/${exercises.length}|${percent}%`;
-
-  const scoreOutput = document.getElementById('mcScoreOutput');
-  scoreOutput.textContent = scoreText;
-  document.getElementById('mcScoreboard').style.display = 'block';
-  document.getElementById('mcSubmitBtn').disabled = true;
-});
-
-// Copy / download wiring
-setupCopyDownload(
-  document.getElementById('mcScoreOutput'),
-  document.getElementById('mcCopyBtn'),
-  document.getElementById('mcDownloadTextBtn'),
-  document.getElementById('mcDownloadPngBtn'),
-  'mc_score'
-);
-</script>
-
-<script>
-// ---------------------- MULTIPLE CHOICE 2 (Dynamic, Pipe-based) ----------------------
-const mc2RawSource = ` 
-Why did the scientist visit the remote cave?
-To collect water samples
-|To look for rare bats|
-To map the cave system
-To take photographs
-
-What is the main challenge for spelunkers in this cave?
-Low visibility
-|Slippery surfaces|
-Strong winds
-Lack of oxygen
-
-How do the bats react when the light shines on them?
-They sing loudly
-They ignore it
-|They scatter quickly|
-They approach the light
-
-Why should the group wear helmets?
-To identify formations
-To carry equipment
-|To protect from falling rocks|
-To stay warm
-
-What signals that it’s safe to continue?
-The guide nods
-The lights turn on
-|The floor is stable and dry|
-Everyone is quiet
-`;
-
-const mc2Container = document.getElementById('mc2Container');
-const mc2Answered = {};
-
-(async () => {
-  const mc2Raw = await resolveRaw(mc2RawSource);
-
-  // Parse questions from raw text using pipes
-  const questions = mc2Raw
-    .trim()
-    .split(/\n\s*\n/)
-    .map(block => {
-      const lines = block.trim().split('\n');
-      const qText = lines.shift().trim();
-      const opts = lines.map(l => l.trim());
-      const correctAnswer = opts.find(o => o.includes('|'))?.replace(/\|/g,'').trim();
-      const cleanOpts = opts.map(o => o.replace(/\|/g,'').trim());
-      return { q: qText, opts: cleanOpts, answer: correctAnswer };
-    });
-
-  // Render dynamically
-  questions.forEach((q, i) => {
-    const div = document.createElement('div');
-    div.className = 'exercise';
-    div.dataset.correct = q.answer;
-    div.style.marginBottom = '6px';
-    div.innerHTML = `<strong>${i+1}.</strong> ${q.q}`;
-
-    q.opts.forEach(opt => {
-      const label = document.createElement('label');
-      label.style.display = 'block';
-
-      const input = document.createElement('input');
-      input.type = 'radio';
-      input.name = `mc2-q${i}`; // unique per question
-      input.value = opt;
-
-      input.addEventListener('change', () => {
-        mc2Answered[i] = opt.trim();
-      });
-
-      label.appendChild(input);
-      label.append(` ${opt}`);
-      div.appendChild(label);
-    });
-
-    mc2Container.appendChild(div);
-  });
-
-// --- LOCK FIRST CLICK FOR SCORING (safe for feedback) ---
-mc2Container.querySelectorAll('.exercise').forEach((ex, i) => {
-  const inputs = ex.querySelectorAll('input[type="radio"]');
-
-  inputs.forEach(input => {
-    input.addEventListener('click', () => {
-      // If question already locked for scoring, do nothing
-      if (ex.dataset.locked) return;
-
-      // Mark this question as locked
-      ex.dataset.locked = 'true';
-
-      // Store which option was first clicked
-      ex.dataset.firstSelected = input.value.trim();
-    });
-  });
-});
-
-
-// Enable submit button only for mc2, fully scoped
-const mc2Btn = document.getElementById('mc2SubmitBtn');
-const mc2Name = document.getElementById('mc2Name');
-const mc2Id = document.getElementById('mc2Id');
-
-const mc2Check = () => mc2Btn.disabled = !(mc2Name.value.trim() && mc2Id.value.trim());
-mc2Name.addEventListener('input', mc2Check);
-mc2Id.addEventListener('input', mc2Check);
-
-
-  // Initialize feedback system
-  initFeedback("#mc2Container");
-})();
-
-// Submit handler
-document.getElementById('mc2SubmitBtn').addEventListener('click', () => {
-  const filename = window.location.pathname.split('/').pop();
-  const nm = document.getElementById('mc2Name').value.trim();
-  const id = document.getElementById('mc2Id').value.trim();
-  const dateStr = new Date().toLocaleString('en-GB', {
-    day: '2-digit', month: '2-digit', year: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  });
-
-const exercises = mc2Container.querySelectorAll('.exercise');
-let score = 0;
-exercises.forEach(ex => {
-  const first = ex.dataset.firstSelected;   // first clicked option
-  if (first && first === ex.dataset.correct) score++;
-});
-
-  const percent = exercises.length ? ((score/exercises.length)*100).toFixed(1) : '0.0';
-  const scoreText = `${filename}|Context Quiz|${nm}|${id}|${dateStr}|${score}/${exercises.length}|${percent}%`;
-
-  const scoreOutput = document.getElementById('mc2ScoreOutput');
-  scoreOutput.textContent = scoreText;
-  document.getElementById('mc2Scoreboard').style.display = 'block';
-  document.getElementById('mc2SubmitBtn').disabled = true;
-});
-
-// Copy / download wiring
-setupCopyDownload(
-  document.getElementById('mc2ScoreOutput'),
-  document.getElementById('mc2CopyBtn'),
-  document.getElementById('mc2DownloadTextBtn'),
-  document.getElementById('mc2DownloadPngBtn'),
-  'mc2_score'
-);
-</script>
-
-<script>
-
-// ---------------------- FILL-IN-THE-BLANK ----------------------
-
-const fibTextSource = `
-
-Word bank: ape, lizard, alien
-
-People think Bigfoot is a big |ape|.
-Nessie is a big |lizard|.
-The little green man from Mars was an |alien|.
-
-`;
-// OR: const fibTextSource = 'fib_words.txt';
-
-const fibContainer = document.getElementById('fibContainer');
-let fibQuestions = []; // ✅ MUST be global
-
-(async function initFIB() {
-
-  // 🔑 Resolve inline OR external text
-  const wordListText = await resolveRaw(fibTextSource);
-
-  fibQuestions = wordListText
-    .trim()
-    .split('\n')
-    .map(line => {
-      const m = line.match(/\|(.*?)\|/);
-      return m
-        ? { sentence: line.replace(/\|(.*?)\|/, '___'), answer: m[1] }
-        : null;
-    })
-    .filter(Boolean);
-
-  fibQuestions.forEach((q, i) => {
-    const div = document.createElement('div');
-    div.style.marginBottom = '6px';
-
-    const parts = q.sentence.split('___');
-
-    const number = document.createElement('strong');
-    number.textContent = `${i + 1}. `;
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.dataset.idx = i;
-
-    div.append(number, parts[0], input, parts[1] || '');
-    fibContainer.appendChild(div);
-  });
-
-  // ✅ SAFE to enable buttons AFTER render
-  enableButtonOnFill(
-    document.getElementById('fibName'),
-    document.getElementById('fibId'),
-    document.getElementById('fibSubmitBtn')
-  );
-
-})();
-
-// ---------------------- SUBMIT HANDLER ----------------------
-
-document.getElementById('fibSubmitBtn').addEventListener('click', () => {
-
-  const filename = window.location.pathname.split('/').pop();
-  const nm = document.getElementById('fibName').value.trim();
-  const id = document.getElementById('fibId').value.trim();
-
-  const dateStr = new Date().toLocaleString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-
-  let score = 0;
-  const inputs = fibContainer.querySelectorAll('input');
-
-  inputs.forEach((inp, i) => {
-    if (inp.value.trim() === fibQuestions[i].answer) score++;
-  });
-
-  const percentFIB = ((score / fibQuestions.length) * 100).toFixed(1);
-
-  const scoreText =
-    `${filename}|Fill-in-the-Blank|${nm}|${id}|${dateStr}|` +
-    `Score: ${score}/${fibQuestions.length}|${percentFIB}%\n\n` +
-    Array.from(inputs).map((inp, i) => `${i + 1}. ${inp.value}`).join('\n');
-
-  const scoreOutput = document.getElementById('fibScoreOutput');
-  scoreOutput.textContent = scoreText;
-
-  document.getElementById('fibScoreboard').style.display = 'block';
-  document.getElementById('fibSubmitBtn').disabled = true;
-});
-
-// ---------------------- COPY / DOWNLOAD ----------------------
-
-setupCopyDownload(
-  document.getElementById('fibScoreOutput'),
-  document.getElementById('fibCopyBtn'),
-  document.getElementById('fibDownloadTextBtn'),
-  document.getElementById('fibDownloadPngBtn'),
-  'fib_score'
-);
-
-</script>
-
-<script>
-// ---------------------- Parts of Speech ----------------------
-
-const rawExercisesSource = `Welcome to the Parts-of-Speech grammar quiz! In each exercise, you'll be asked to click on specific parts of speech within the sentence. Test your knowledge and have fun!
-
-Click the noun(s) - |Bigfoot| ate the |pizza|.
-
-Click the verb(s) - Bigfoot |hid| in the forest.
-
-Click the adjective(s) - The legends say that Bigfoot is very |stinky|.
-
-Click the adverb(s) - Bigfoot |quickly| ran away.
-`;
-
-(async function initQuiz() {
-  // Resolve raw text FIRST
-  const rawExercises = await resolveRaw(rawExercisesSource);
-
-  const exercises = rawExercises
-    .split('\n')
-    .filter(line => line.trim().length > 0);
-
-  const introduction = exercises[0];
-  document.getElementById('instructions').textContent = introduction;
-
-  const quizExercises = exercises.slice(1);
-
-  let totalAnswers = 0;
-  let correctAnswers = 0;
-  let pipedWordsCount = 0;
-
-function parseExercise(exerciseText, index) {
-  const parts = exerciseText.split(' - ');
-  const prompt = `${index}. ${parts[0]}`;
-  const sentence = parts[1];
-
-  pipedWordsCount += (sentence.match(/\|/g) || []).length / 2;
-
-  // Tokenize words, spaces, and punctuation
-  const tokens = sentence.match(/\|\s*[^|]+\s*\||\s+|\w+|[.,!?;]/g);
-
-  const parsedSentence = tokens.map(token => {
-    // Correct word (strip pipes, KEEP trailing space)
-    if (token.startsWith('|')) {
-      const clean = token.replace(/\|/g, '');
-      return `<span class="word" data-correct="true">${clean}</span>`;
-    }
-
-    // Normal word OR whitespace → wrapped to keep flow continuous
-    return `<span>${token}</span>`;
-  }).join('');
-
-  return `${prompt} - ${parsedSentence}`;
-}
-
-
-
-  function renderExercises() {
-    const exercisesContainer = document.getElementById('exercises');
-    exercisesContainer.innerHTML = "";
-
-    quizExercises.forEach((exercise, index) => {
-      const parsedExercise = parseExercise(exercise, index + 1);
-
-      const exerciseContainer = document.createElement('div');
-      exerciseContainer.classList.add('exercise-container');
-
-      const sentence = document.createElement('div');
-      sentence.classList.add('sentence');
-      sentence.innerHTML = parsedExercise;
-
-      exerciseContainer.appendChild(sentence);
-      exercisesContainer.appendChild(exerciseContainer);
-    });
-
-    document.querySelectorAll('.word').forEach(word => {
-      word.addEventListener('click', handleWordClick);
-    });
-
-  }
-
-// ---------------------- WORD CLICK & SCORE ----------------------
-function handleWordClick(event) {
-  const wordElement = event.target;
-  const isCorrect = wordElement.dataset.correct === 'true';
-
-  if (wordElement.classList.contains('correct') ||
-      wordElement.classList.contains('incorrect')) {
-    return;
-  }
-
-  if (isCorrect) {
-    wordElement.classList.add('correct');
-    correctAnswers++;
-  } else {
-    wordElement.classList.add('incorrect');
-  }
-
-  totalAnswers++;
-  updateScore(); // only updates dynamically after clicks
-}
-
-function updateScore() {
-  const scoreElement = document.getElementById('score');
-  const percentage =
-    pipedWordsCount > 0
-      ? ((correctAnswers / pipedWordsCount) * 100).toFixed(2)
-      : "0.00";
-
-  scoreElement.textContent =
-    `Score: ${correctAnswers} / ${pipedWordsCount} (${percentage}%)`;
-}
-
-// ---------------------- INITIAL RENDER ----------------------
-renderExercises(); 
-// NOTE: Do NOT call updateScore() here — prevents extra score at top
-// ---------------------- SUBMISSION ----------------------
-
-// Grab elements
-const nameInput = document.getElementById('name');
-const idInput = document.getElementById('id');
-const submitBtn = document.getElementById('grammarsubmit');
-
-// Enable/disable submit button based on inputs
-function checkInputs() {
-  submitBtn.disabled = !(nameInput.value && idInput.value);
-}
-
-nameInput.addEventListener('input', checkInputs);
-idInput.addEventListener('input', checkInputs);
-
-// Click listener for submit
-submitBtn.addEventListener('click', function() {
-  const name = nameInput.value.trim();
-  const id = idInput.value.trim();
-
-  if (!name || !id) {
-    alert('Please enter both your name and ID before submitting.');
-    return;
-  }
-
-  const date = new Date();
-  const dateString =
-    `${String(date.getDate()).padStart(2,'0')}/` +
-    `${String(date.getMonth()+1).padStart(2,'0')}/` +
-    `${String(date.getFullYear()).slice(-2)}, ` +
-    `${String(date.getHours()).padStart(2,'0')}:` +
-    `${String(date.getMinutes()).padStart(2,'0')}`;
-
-  const filename = window.location.pathname.split('/').pop();
-  const section = 'Parts of Speech';
-  const percentage =
-    pipedWordsCount > 0
-      ? ((correctAnswers / pipedWordsCount) * 100).toFixed(2)
-      : "0.00";
-
-  const resultText = `Filename: ${filename}|Section: ${section}|Name: ${name}|ID: ${id}|Date: ${dateString}|Score: ${correctAnswers} / ${pipedWordsCount}|${percentage}%`;
-
-  // Show ONLY the result string
-  document.getElementById('result').textContent = resultText;
-  document.getElementById('scoreboardContainer').style.display = 'block';
-  document.getElementById('scoreboardBtns').style.display = 'flex';
-});
-  // ---------------------- EXPORT ACTIONS ----------------------
-
-  document.getElementById('grammarCopyBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(
-      document.getElementById('result').textContent
-    ).then(() => alert('Score copied to clipboard!'));
-  });
-
-  document.getElementById('grammarDownloadTxtBtn').addEventListener('click', () => {
-    const blob = new Blob(
-      [document.getElementById('result').textContent],
-      { type: 'text/plain' }
-    );
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'score.txt';
-    link.click();
-  });
-
-  document.getElementById('grammarDownloadPngBtn').addEventListener('click', () => {
-    html2canvas(document.getElementById('result')).then(canvas => {
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = 'score.png';
-      link.click();
-    });
-  });
-
-})();
-</script>
-
-<script>
-// ---------------------- SCRAMBLE ----------------------
-const scrambleQuestionsSource = `
-A group of campers find strange footprints in the forest.
-They decide to follow the footprints carefully.
-They walk deeper between the tall trees.
-Suddenly, they hear a loud, mysterious howl nearby.
-Then they see Bigfoot peeking out at them from behind a tree.
-`;
-
-const scrambleContainer = document.getElementById('scrambleContainer');
-let scrambleQuestions = [];
-
-(() => {
-  // ✅ Resolve raw text (no async needed)
-  const raw = scrambleQuestionsSource;
-  scrambleQuestions = raw.trim().split('\n');
-
-  // ✅ Render AFTER resolve
-  scrambleQuestions.forEach((s, i) => {
-    const div = document.createElement('div');
-    div.style.marginBottom = '8px';
-
-    const tokens = s.match(/[\w'-]+|[.,!?;:"“”‘’()]/g) || [];
-    const words = tokens.filter(t => /\w/.test(t)).sort(() => Math.random() - 0.5);
-    const tileEls = [];
-
-    div.innerHTML = `<strong>${i + 1}. </strong>`;
-
-    tokens.forEach(tok => {
-      const span = document.createElement('span');
-      if (/\w/.test(tok)) {
-        span.textContent = words.shift();
-        span.className = 'word-tile';
-        tileEls.push(span);
-      } else {
-        span.textContent = tok;
-      }
-      div.appendChild(span);
-      div.appendChild(document.createTextNode(' '));
-    });
-
-    scrambleContainer.appendChild(div);
-
-    let selected = null;
-    tileEls.forEach(tile =>
-      tile.addEventListener('click', () => {
-        if (!selected) {
-          selected = tile;
-          tile.classList.add('selected');
-          return;
-        }
-        if (selected === tile) {
-          selected.classList.remove('selected');
-          selected = null;
-          return;
-        }
-        const tmp = selected.textContent;
-        selected.textContent = tile.textContent;
-        tile.textContent = tmp;
-        selected.classList.remove('selected');
-        selected = null;
-      })
-    );
-  });
-
-  // ✅ Enable submit AFTER render (inline version)
-  const nameInput = document.getElementById('scrambleName');
-  const idInput = document.getElementById('scrambleId');
-  const submitBtn = document.getElementById('scrambleSubmitBtn');
-
-  function checkEnableSubmit() {
-    submitBtn.disabled = !(nameInput.value.trim() && idInput.value.trim());
-  }
-  nameInput.addEventListener('input', checkEnableSubmit);
-  idInput.addEventListener('input', checkEnableSubmit);
-  checkEnableSubmit(); // initialize state
-})();
-
-// ---------------------- SUBMIT ----------------------
-document.getElementById('scrambleSubmitBtn').addEventListener('click', () => {
-  const filename = window.location.pathname.split('/').pop();
-  const nm = document.getElementById('scrambleName').value.trim();
-  const id = document.getElementById('scrambleId').value.trim();
-
-  const dateStr = new Date().toLocaleString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-
-  // Only divs with word tiles
-  const divs = Array.from(scrambleContainer.children).filter(div => div.querySelector('.word-tile'));
-  const correctSentences = scrambleQuestions.map(
-    s => s.match(/[\w'-]+|[.,!?;:"“”‘’()]/g) || []
-  );
-
-  let score = 0;
-
-  divs.forEach((div, i) => {
-    const userWords = Array.from(div.querySelectorAll('.word-tile')).map(t => t.textContent);
-    const correctWords = correctSentences[i].filter(t => /\w/.test(t));
-    if (
-      userWords.length === correctWords.length &&
-      userWords.every((w, idx) => w === correctWords[idx])
-    ) score++;
-  });
-
-  const percentScramble = divs.length
-    ? ((score / divs.length) * 100).toFixed(1)
-    : '0.0';
-
-  const scoreText = `${filename}|Scramble|${nm}|${id}|${dateStr}|${score}/${divs.length}|${percentScramble}%`;
-
-  const scoreOutput = document.getElementById('scrambleScoreOutput');
-  scoreOutput.textContent = scoreText;
-  document.getElementById('scrambleScoreboard').style.display = 'block';
-  document.getElementById('scrambleSubmitBtn').disabled = true;
-});
-
-// Copy / download
-setupCopyDownload(
-  document.getElementById('scrambleScoreOutput'),
-  document.getElementById('scrambleCopyBtn'),
-  document.getElementById('scrambleDownloadTextBtn'),
-  document.getElementById('scrambleDownloadPngBtn'),
-  'scramble_score'
-);
-</script>
-
-
-
-<script>
-(async () => {
-  // Replace your static array with a raw text source or filename
-  const rawSource = `
-A group of campers find strange footprints in the forest.
-They decide to follow the footprints carefully.
-They walk deeper between the tall trees.
-Suddenly, they hear a loud, mysterious howl nearby.
-Then they see Bigfoot peeking out at them from behind a tree.
-Bigfoot invites them to visit his giant redwood treehouse.
-They climb up and enter the warm, cozy home.
-They meet Bigfoot’s family and make friends.
-Afterwards, they eat delicious nuts and berries from the forest with the Bigfoot family.
-Finally, it is time to say goodbye, but the campers promise to visit again soon.
-`;
-
-  // Use resolveRaw to handle either literal text or external file
-  const resolvedText = await resolveRaw(rawSource);
-
-  // Convert to array of lines
-  const sequenceSentences = resolvedText
-    .trim()
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
-
-  const container = document.getElementById('sequenceContainer');
-  const nameInput = document.getElementById('sequenceName');
-  const idInput = document.getElementById('sequenceId');
-  const submitBtn = document.getElementById('sequenceSubmitBtn');
-
-  function checkEnableSubmit() {
-    submitBtn.disabled = !(nameInput.value.trim() && idInput.value.trim());
-  }
-  nameInput.addEventListener('input', checkEnableSubmit);
-  idInput.addEventListener('input', checkEnableSubmit);
-
-  const shuffled = [...sequenceSentences].sort(() => Math.random() - 0.5);
-
-  shuffled.forEach(sentence => {
-    const div = document.createElement('div');
-    div.className = 'sequence-tile';
-    div.style.border = '1px solid #ccc';
-    div.style.padding = '10px';
-    div.style.marginBottom = '8px';
-    div.style.cursor = 'pointer';
-    div.style.wordWrap = 'break-word';
-    div.textContent = sentence;
-    container.appendChild(div);
-  });
-
-  let selectedTile = null;
-  container.querySelectorAll('.sequence-tile').forEach(tile => {
-    tile.addEventListener('click', () => {
-      if (!selectedTile) {
-        selectedTile = tile;
-        tile.style.backgroundColor = '#ffd';
-        return;
-      }
-      if (selectedTile === tile) {
-        selectedTile.style.backgroundColor = '';
-        selectedTile = null;
-        return;
-      }
-      [selectedTile.textContent, tile.textContent] = [tile.textContent, selectedTile.textContent];
-      selectedTile.style.backgroundColor = '';
-      selectedTile = null;
-    });
-  });
-
-submitBtn.addEventListener('click', () => {
-  const name = nameInput.value.trim();
-  const id = idInput.value.trim();
-  const dateStr = new Date().toLocaleString('en-GB', { hour12: false });
-
-  const tiles = Array.from(container.querySelectorAll('.sequence-tile'));
-  let score = 0;
-
-  tiles.forEach((tile, idx) => {
-    if (tile.textContent === sequenceSentences[idx]) score++;
-  });
-
-  const percent = ((score / sequenceSentences.length) * 100).toFixed(1);
-  const filename = window.location.pathname.split('/').pop();
-  const scoreText = `${filename}|Sequence|${name}|${id}|${dateStr}|${score}/${sequenceSentences.length}|${percent}%`;
-
-  const scoreOutput = document.getElementById('sequenceScoreOutput');
-  scoreOutput.textContent = scoreText;
-  document.getElementById('sequenceScoreboard').style.display = 'block';
-  submitBtn.disabled = true;
-
-  // --- Copy/download buttons wiring ---
-  setupCopyDownload(
-    scoreOutput,
-    document.getElementById('sequenceCopyBtn'),
-    document.getElementById('sequenceDownloadTextBtn'),
-    document.getElementById('sequenceDownloadPngBtn'),
-    'sequence_score'
-  );
-});
-})(); // <-- This was missing
-
-</script>
 
 <script>
 const rawVocabTextSource = `
-• creature 🐾 – the beings themselves<br>
-cryptid, monster, beast, humanoid, animal, entity, unknown, legendary, mythical, hybrid
 
-• sightings 👀 – instances of seeing a cryptid<br>
-sighting, encounter, report, witness, observation, trace, footprint, track, evidence, photograph
+~ Unit 1 - Family & Friends
 
-• habitat 🌲 – where a cryptid is believed to live<br>
-forest, lake, swamp, mountains, cave, river, wilderness, remote, hidden, isolated
+• always - every time<br>
+constantly, forever
 
-• behavior 🐾 – how cryptids act<br>
-nocturnal, elusive, aggressive, shy, mysterious, territorial, migratory, vocal, predatory, playful
+• never - not ever<br>
+at no point, not once
 
-• evidence 🔬 – proof or signs of existence<br>
-footprint, hair, scat, photograph, video, recording, relic, artifact, trace, sound
+• usually - generally<br>
+commonly, mostly
 
-• myth / legend 📜 – stories about cryptids<br>
-legend, folklore, myth, tale, saga, story, fable, oral tradition, lore, anecdote
+• sometimes - occasionally<br>
+at intervals, every so often
 
-• investigation 🕵️ – research or study of cryptids<br>
-investigation, expedition, field study, tracking, research, observation, interview, documentation, analysis, exploration
+• often - many times<br>
+frequently, regularly
 
-• hoax / Skepticism 🤔 – disbelief or fake reports<br>
-hoax, fake, myth, theory, skepticism, debunk, fraud, illusion, false, unverified
+• rarely - not often<br>
+scarcely, infrequently
 
-• classification 🧬 – types of cryptids<br>
-humanoid, reptilian, aquatic, winged, canine, feline, hybrid, unknown, legendary, prehistoric
+• hardly ever - almost never<br>
+seldom, almost not
 
-• folklore regions 🌎 – locations famous for cryptids<br>
-North America, South America, Asia, Europe, Africa, Pacific Islands, Australia, local, remote, wilderness
+• rollerblading - skating on wheels<br>
+skating, blading
+
+• musical instrument - music tool<br>
+instrument, gear
+
+• magazines - periodicals<br>
+journals, publications
+
+• dance class - dance lesson<br>
+workshop, training session
+
+• acrobatics - gymnastic performance<br>
+tumbling, stunts
+
+• exercise - physical activity<br>
+training, workout
+
+• museums - exhibition place<br>
+galleries, exhibit centers
+
+• be keen on - like very much<br>
+be into, be fond of
+
+• interested in - have interest<br>
+curious about, drawn to
+
+• parents - mother and father<br>
+guardians, mum and dad
+
+• cousin - uncle/aunt’s child<br>
+relative, extended family member
+
+• aunt - parent’s sister<br>
+relative, family auntie
+
+• uncle - parent’s brother<br>
+relative, family uncle
+
+• typical - normal<br>
+standard, ordinary
+
+• awesome - excellent<br>
+amazing, fantastic
+
+• brilliant - very smart<br>
+outstanding, superb
+
+• experimental - testing-based<br>
+trial-based, test-phase
+
+• information - facts/data<br>
+data, knowledge<br>
+
+~Unit 2 – Food
+
+• onions - vegetable<br>
+bulbs, alliums
+
+• potatoes - tuber<br>
+spuds, tubers
+
+• sugar - sweetener<br>
+sweetener, sucrose
+
+• ketchup - tomato sauce<br>
+sauce, condiment
+
+• lemonade - lemon drink<br>
+citrus drink, soft drink
+
+• butter - dairy spread<br>
+spread, dairy fat
+
+• mayonnaise - creamy sauce<br>
+mayo, dressing
+
+• crisps - potato chips<br>
+chips, snacks
+
+• carton - box container<br>
+container, pack box
+
+• jar - glass container<br>
+pot, storage jar
+
+• loaf - bread shape<br>
+bread block, bread unit
+
+• packet - small pack<br>
+pack, sachet
+
+• tub - plastic container<br>
+container, bucket
+
+• take out - remove<br>
+remove, extract
+
+• boil - cook in water<br>
+simmer, heat in water
+
+• chop - cut<br>
+slice, dice
+
+• fry - cook in oil<br>
+sauté, pan-cook
+
+• heat - make hot<br>
+warm, raise temperature
+
+• yummy - tasty<br>
+delicious, scrumptious
+
+• fresh - not old<br>
+crisp, newly made
+
+• spicy - hot taste<br>
+fiery, hot-flavoured
+
+• ingredients - components<br>
+elements, components
+
+• dessert - sweet food<br>
+sweet course, pudding
+
+• prepare - get ready<br>
+get ready, assemble
+
+• olive oil - oil<br>
+cooking oil, oil extract
+
+• taste - flavour<br>
+flavour, savour
+
+• grilled - cooked over fire<br>
+barbecued, flame-cooked
+
+• vegetarian - no meat diet<br>
+plant-based eater, non-meat eater
+
+• recommend - suggest<br>
+advise, put forward
+
+• unhealthy - bad for health<br>
+harmful, damaging<br>
+
+~ Unit Title: Unit 3 – Work
+
+
+• accountant - finance worker<br>
+bookkeeper, finance clerk
+
+• architect - building designer<br>
+designer, planner
+
+• astronaut - space traveler<br>
+space explorer, cosmonaut
+
+• builder - construction worker<br>
+constructor, tradesperson
+
+• engineer - technical worker<br>
+technician, specialist
+
+• hairdresser - hair cutter<br>
+stylist, barber
+
+• journalist - news reporter<br>
+reporter, correspondent
+
+• lawyer - legal expert<br>
+solicitor, counsel
+
+• plumber - pipe worker<br>
+pipe fitter, repair worker
+
+• receptionist - front desk worker<br>
+front-desk clerk, admin assistant
+
+• volunteer - unpaid helper<br>
+helper, unpaid worker
+
+• profession - job type<br>
+occupation, career
+
+• company - business<br>
+firm, corporation
+
+• fascinating - very interesting<br>
+captivating, gripping
+
+• duty - responsibility<br>
+task, obligation
+
+• earn money - get income<br>
+make income, get paid
+
+• responsible - reliable<br>
+dependable, trustworthy
+
+• education - learning system<br>
+schooling, training system
+
+• colleague - coworker<br>
+coworker, associate
+
+• life experience - life knowledge<br>
+personal knowledge, lived experience
+
+• language - communication system<br>
+speech system, communication<br>
+
+~ Unit Title: Unit 4 – People
+
+
+• personality - character<br>
+temperament, traits
+
+• unfriendly - not friendly<br>
+hostile, cold
+
+• unkind - cruel<br>
+mean, harsh
+
+• unsociable - not social<br>
+withdrawn, reserved
+
+• flexible - adaptable<br>
+adaptable, versatile
+
+• calm - peaceful<br>
+relaxed, composed
+
+• cheerful - happy<br>
+joyful, upbeat
+
+• negative - pessimistic<br>
+pessimistic, gloomy
+
+• sense of humour - funny feeling<br>
+wit, comedic sense
+
+• creative - imaginative<br>
+inventive, original
+
+• energetic - full of energy<br>
+lively, dynamic
+
+• generous - giving<br>
+giving, charitable
+
+• confident - self-assured<br>
+self-assured, bold
+
+• appearance - looks<br>
+looks, outward form
+
+• good-looking - attractive<br>
+attractive, appealing
+
+• bald - no hair<br>
+hairless, shaved-headed
+
+• ugly - not pretty<br>
+unattractive, plain
+
+• well-built - strong body<br>
+muscular, strong-built
+
+• curly - wavy hair<br>
+ringleted, curled
+
+• wavy - soft waves<br>
+rippled, undulating
+
+• straight - not curly<br>
+sleek, uncurled
+
+• spiky - upright hair<br>
+bristled, pointed
+
+• ponytail - tied hair<br>
+tied-back style, hair tie
+
+• shaved - no hair<br>
+bald-cut, clean-shaven<br>
+
+~ Unit Title: Unit 5 – Education
+
+
+• kindergarten - early school<br>
+preschool, nursery
+
+• primary school - first school<br>
+elementary school, junior school
+
+• secondary school - high school<br>
+high school, senior school
+
+• university - higher education<br>
+college, academy
+
+• library - book place<br>
+reading room, archive
+
+• canteen - food place<br>
+cafeteria, refectory
+
+• corridor - hallway<br>
+hallway, passage
+
+• lessons - classes<br>
+classes, sessions
+
+• on time - punctual<br>
+punctual, timely
+
+• late - not on time<br>
+delayed, overdue
+
+• Chemistry - science subject<br>
+chemical science, chemistry subject
+
+• Physics - science subject<br>
+physical science, mechanics
+
+• Biology - life science<br>
+life science, natural science
+
+• Geography - Earth study<br>
+earth studies, mapping science
+
+• experiments - tests<br>
+tests, trials
+
+• concentrate - focus<br>
+focus, attend
+
+• professor - university teacher<br>
+lecturer, academic
+
+• grades - marks<br>
+scores, marks
+
+• was - past be<br>
+existed (past), happened (past)
+
+• were - past plural be<br>
+existed (plural), happened (plural)
+
+• could - past ability<br>
+was able to, had ability<br>
+
+~ Unit 6 – Health & Sport
+
+
+• success - achievement<br>
+victory, triumph
+
+• badminton - sport<br>
+shuttle sport, racket game
+
+• basketball - sport<br>
+court game, hoop sport
+
+• climbing - climbing activity<br>
+scaling, mount ascent
+
+• cycling - bike riding<br>
+biking, riding
+
+• stretching - muscle exercise<br>
+loosening, extending
+
+• yoga - body exercise<br>
+mindfulness exercise, body practice
+
+• karate - martial art<br>
+combat sport, striking art
+
+• kung fu - martial art<br>
+martial discipline, combat skill
+
+• martial arts - fighting arts<br>
+combat training, fighting systems
+
+• skiing - snow sport<br>
+snow gliding, winter sport
+
+• kayaking - paddling sport<br>
+paddling, canoe sport
+
+• sailing - boat sailing<br>
+boating, wind navigation
+
+• skating - ice/wheel sport<br>
+gliding sport, ice/wheel movement
+
+• gymnast - athlete<br>
+athlete, acrobat
+
+• competition - contest<br>
+contest, showdown
+
+• explained - pi-jaa-rà-naa<br>
+clarified, broke down
+
+• got - dai<br>
+obtained, received
+
+• died - sǐa chii-wít<br>
+passed, perished
+
+• climbed - pîi<br>
+scaled, ascended
+
+• fell - dtòk<br>
+dropped, tumbled
+
+• believed - chʉ̂a<br>
+accepted, trusted
+
+• reached - dâi pʉ̂ng<br>
+arrived, attained
+
+• thought - khít<br>
+figured, reckoned
+
+• phoned - thaa-raa-sàp<br>
+called, rang up
+
+• stopped - yùt<br>
+ceased, ended
+
+• tried - lɔɔŋ<br>
+attempted, made effort
+
+• became - glàai pen<br>
+turned into, developed
+
+• went - bpai<br>
+traveled, headed
+
+• drank - dûem<br>
+sipped, consumed
+
+• had - mii<br>
+possessed, experienced
+
+• ran - wîng<br>
+sprinted, dashed
+
+• said - phûut<br>
+stated, voiced
+
+• took - ao<br>
+grabbed, collected
+
+• left - òk jàak<br>
+departed, exited
+
+• ate - kin<br>
+consumed, ate up
+
+• began - rʉ̂m<br>
+initiated, started
+
+• met - jòp<br>
+encountered, ran into
+
+• talked - khui<br>
+chatted, spoke
+
+• did - tham<br>
+performed, carried out
+
+• individual - single person<br>
+single person, one unit<br>
+
+~ Unit 7 – Travel
+
+
+• activity - action<br>
+event, task
+
+• adventure - exciting trip<br>
+expedition, journey
+
+• backpacking - travel with backpack<br>
+budget travel, backpack trip
+
+• book a flight - reserve flight<br>
+reserve ticket, secure seat
+
+• accommodation - place to stay<br>
+lodging, stay place
+
+• excursion - short trip<br>
+outing, short journey
+
+• transport - travel system<br>
+transit, mobility system
+
+• reservation - booking<br>
+booking, holding
+
+• arrangements - plans<br>
+setup, organisation
+
+• package tour - all-in tour<br>
+bundled trip, organised holiday
+
+• see the sights - sightseeing<br>
+sightseeing, touring
+
+• check-in desk - airport desk<br>
+airport counter, registration point
+
+• foreign country - other country<br>
+overseas nation, abroad
+
+• trip abroad - overseas trip<br>
+overseas travel, international trip
+
+• announcement - public message<br>
+notice, public statement
+
+• luggage - bags<br>
+baggage, suitcases
+
+• brochure - information booklet<br>
+leaflet, pamphlet
+
+• passenger - traveler<br>
+traveler, rider
+
+• tourist - visitor<br>
+visitor, sightseer
+
+• destination - end place<br>
+endpoint, arrival place
+
+• youth hostel - cheap hostel<br>
+backpacker lodge, budget stay<br>
+
+~ Unit 8 – Nature
+
+
+• pollution - environmental damage<br>
+contamination, fouling
+
+• climate change - weather change<br>
+climate shift, global shift
+
+• global warming - Earth heating<br>
+temperature rise, heating trend
+
+• protect the environment - save nature<br>
+conserve nature, safeguard planet
+
+• toxic waste - poisonous waste<br>
+hazardous material, dangerous waste
+
+• recycling - reuse materials<br>
+reuse process, material recovery
+
+• habitat - animal home<br>
+ecosystem, natural home
+
+• wildlife - wild animals<br>
+fauna, wild animals
+
+• disappear - vanish<br>
+vanish, fade out
+
+• hunt - chase animals<br>
+track, pursue
+
+• melt - turn to liquid<br>
+liquefy, dissolve
+
+• predict - forecast<br>
+forecast, anticipate
+
+• rubbish - trash<br>
+waste, garbage
+
+• public transport - shared transport<br>
+mass transit, shared travel
+
+• solve problems - fix issues<br>
+fix issues, resolve matters
+
+• temperature - heat level<br>
+heat level, warmth
+
+• degree - unit<br>
+measurement unit, scale unit
+
+• continent - land mass<br>
+landmass, major region
+
+• energy - power<br>
+power, force
+
+• intelligent - smart<br>
+clever, bright
+
+• evolution - development over time<br>
+gradual development, progression
+
+
+
+
+
 `;
 // ===== CONFIGURABLE TOGGLES =====
 const lockInputs = false;
@@ -2294,18 +1815,21 @@ function parseVocabInput(text){
   const lines = text.trim().split('\n');
   const pairs = [];
 
+  // Broad but SAFE emoji range (no Unicode properties)
+  const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu;
+
   for(let i = 0; i < lines.length; i++){
     const line = lines[i].trim();
-    if(!line) continue; // skip empty lines
+    if(!line) continue;
 
-    // Only parse lines with '–'
-if(/[-–]/.test(line)){
-      let [wordPart, defPart] = line.split(/\s*[-–]\s*/);
+if(/[-–]/.test(line)){      let [wordPart, defPart] = line.split(/\s*[-–]\s*/);
 
-      // Remove bullet and emojis from left column
-      wordPart = wordPart.replace(/^•\s*/, '').replace(/[\u{1F300}-\u{1FAFF}]/gu, '').trim();
+      // Remove bullet + emojis ONLY from word
+      wordPart = wordPart
+        .replace(/^•\s*/, '')
+        .replace(EMOJI_REGEX, '')
+        .trim();
 
-      // Right column: only take text before <br>
       const definition = defPart.split('<br>')[0].trim();
 
       pairs.push({ word: wordPart, definition });
@@ -2314,6 +1838,7 @@ if(/[-–]/.test(line)){
 
   return pairs;
 }
+
 
 
 function applyPlaceholders(){
@@ -2350,6 +1875,8 @@ function shuffle(array){
 let vocabPairs = [];
 let selectedTile = null;
 // ==============================================
+
+let currentSectionIndex = 0;
 
 function createVocabTile(index){
   const tile = document.createElement('div');
@@ -2460,16 +1987,48 @@ function handleVocabSubmit(){
   const dt = new Date().toLocaleString('en-GB',{hour12:false});
   const file = location.pathname.split('/').pop();
 
-  document.getElementById('vocabScoreOutput').textContent =
-    `${file}|Vocabulary|${name}|${id}|${dt}|${score}/${vocabPairs.length}`;
+const total = vocabPairs.length;
+const percent = total === 0 ? 0 : Math.round((score / total) * 100);
+
+document.getElementById('vocabScoreOutput').textContent =
+  `${file}|Vocabulary|${name}|${id}|${dt}|${score}/${total}|${percent}%`;
   document.getElementById('vocabScoreboard').style.display = 'block';
 }
+
+function parseSections(raw) {
+  const chunks = raw
+    .split(/\n(?=~+)/)
+    .map(c => c.trim())
+    .filter(c => c.startsWith("~"));
+
+  return chunks.map(chunk => {
+    const lines = chunk.split("\n");
+    const name = lines.shift().replace(/^~+/, "").trim();
+    const text = lines.join("\n").trim();
+    return { name, text };
+  });
+}
+
+function detectSectionType(sectionText) {
+  if (/<br>/.test(sectionText)) return "signal";
+  if (sectionText.includes("•")) return "vocab";
+  return "unknown";
+}
+
+
+
+
 
 // ===== SAFE INIT =====
 document.addEventListener('DOMContentLoaded', () => {
   // Use internal raw text directly
-  vocabPairs = parseVocabInput(rawVocabTextSource);
-  setupVocabGame();
+  const sections = parseSections(rawVocabTextSource);
+
+const sectionData = sections.map(sec => ({
+  name: sec.name,
+  type: detectSectionType(sec.text),
+  pairs: parseVocabInput(sec.text)
+}));
 
   const btn = document.getElementById('vocabSubmitBtn');
   const name = document.getElementById('vocabName');
@@ -2488,7 +2047,65 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('vocabDownloadPngBtn'),
     'vocab_score'
   );
-});</script>
+
+// ===== SECTION WHEEL DISPLAY =====
+const wheel = document.querySelector('.wheel');
+let currentSectionIndex = null; // start with no selection
+
+function updateWheel() {
+  if (currentSectionIndex === null) {
+    wheel.textContent = "Select a category."; // placeholder text
+    document.getElementById('sectionStart').disabled = true;
+  } else {
+    wheel.textContent = sectionData[currentSectionIndex].name;
+    document.getElementById('sectionStart').disabled =
+      sectionData[currentSectionIndex].pairs.length === 0;
+  }
+}
+
+// Initial display
+updateWheel();
+
+// ===== SECTION NAVIGATION BUTTONS =====
+document.getElementById('sectionUp').addEventListener('click', () => {
+  if (currentSectionIndex === null) currentSectionIndex = 0;
+  else currentSectionIndex =
+    (currentSectionIndex - 1 + sectionData.length) % sectionData.length;
+  updateWheel();
+});
+
+document.getElementById('sectionDown').addEventListener('click', () => {
+  if (currentSectionIndex === null) currentSectionIndex = 0;
+  else currentSectionIndex =
+    (currentSectionIndex + 1) % sectionData.length;
+  updateWheel();
+});
+  // ===== SECTION START BUTTON =====
+document.getElementById('sectionStart').addEventListener('click', () => {
+  const activeSection = sectionData[currentSectionIndex];
+
+  vocabPairs = activeSection.pairs;
+
+  setupVocabGame();
+
+  // show the vocab board only now
+  const board = document.querySelector('.game-board');
+if (board) board.classList.add('active');
+
+
+  // lock section controls
+  document.getElementById('sectionUp').disabled = true;
+  document.getElementById('sectionDown').disabled = true;
+  document.getElementById('sectionStart').disabled = true;
+});
+
+
+
+});
+
+
+
+</script>
 
 
 <script>
@@ -3072,7 +2689,7 @@ restartBtn.addEventListener('click', () => {
 });
 </script>
 
-<script>
+<!--<script>
   window.OVERLAY_ENABLED = false;
 
   (function(){
@@ -3208,7 +2825,7 @@ restartBtn.addEventListener('click', () => {
     setInterval(scanAndAssignOverlays, 700);
 
   })();
-</script>
+</script>-->
 
 
 <script>
@@ -3424,6 +3041,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 <script>
+(function () {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Hide scrollbar but keep scrolling */
+    html {
+      scrollbar-width: none;          /* Firefox */
+    }
+
+    body {
+      -ms-overflow-style: none;       /* IE / Edge legacy */
+    }
+
+    body::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;                  /* Chrome / Safari */
+    }
+  `;
+  document.head.appendChild(style);
+})();
+</script>
+
+
+<script>
 document.addEventListener("DOMContentLoaded", function () {
 
     // Get filename only
@@ -3447,6 +3088,265 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+<script>
+
+(function(){
+
+/* =========================
+   RAW INSTRUCTIONS TEXT
+========================= */
+
+const RAW_TEXT = `
+
+How to use this page...
+
+1. Enter Name and ID.
+2. Select a category to view the main list.
+3. If placeholder text is enabled, type the word into each tile.
+4. If tiles are blank, type each word the instructor reads into each tile.
+5. Correct spelling turns a tile green. A red tile is incorrectly spelled.
+6. You must match the tiles with the correct definition.
+6. Click on the tiles to select and click where you want them to go, from top to bottom.
+7. Click Submit to see your score.
+8. Click to copy or download your score.
+
+`;
+
+
+/* =========================
+   RAW TEXT PARSER
+========================= */
+
+function parseRawInstructions(text){
+
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const html = [];
+
+  lines.forEach(line => {
+
+    if(line === "---"){
+      html.push(`<hr>`);
+      return;
+    }
+
+    if(/^\d+\./.test(line)){
+      html.push(`<p>${line}</p>`);
+      return;
+    }
+
+    if(!/[.!?:]$/.test(line)){
+      html.push(`<h3>${line}</h3>`);
+      return;
+    }
+
+    html.push(`<p>${line}</p>`);
+  });
+
+  return html.join("");
+}
+
+
+/* =========================
+   CREATE STYLE
+========================= */
+
+const style = document.createElement("style");
+
+style.textContent = `
+#instructionsBtn{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  padding:10px 16px;
+  background:#2e8b57;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 4px 8px rgba(0,0,0,0.6);
+  z-index:99998;
+}
+
+#instructionsBtn:hover{
+  background:#257047;
+}
+
+#instructionsRoot{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:99999;
+}
+
+#instructionsBackdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.35);
+}
+
+#instructionsModal{
+  position:absolute;
+  top:25px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(650px,90vw);
+  max-height:90vh;
+  background:#fff;
+  border-radius:10px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+#instructionsHeader{
+  padding:12px 16px;
+  border-bottom:1px solid #ddd;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+#instructionsTitle{
+  color:#1976d2;
+  font-weight:600;
+  font-size:1.1em;
+}
+
+#instructionsBack{
+  border:none;
+  background:none;
+  font-size:20px;
+  cursor:pointer;
+  color:#1976d2;
+  font-weight:600;
+}
+
+#instructionsContent{
+  padding:2px 18px 18px 18px;
+  overflow-y:auto;
+  line-height:1.6;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+
+#instructionsContent::-webkit-scrollbar{
+  display:none;
+}
+
+#instructionsContent h3{
+  color:#1976d2;
+  margin:12px 0 4px 0;
+  font-weight:600;
+}
+
+#instructionsContent p{
+  margin:4px 0;
+}
+
+#instructionsContent hr{
+  margin:12px 0;
+}
+`;
+
+document.head.appendChild(style);
+
+
+/* =========================
+   CREATE BUTTON
+========================= */
+
+const btn = document.createElement("button");
+btn.id = "instructionsBtn";
+btn.textContent = "Instructions";
+
+document.body.appendChild(btn);
+
+
+/* =========================
+   CREATE MODAL
+========================= */
+
+const root = document.createElement("div");
+root.id = "instructionsRoot";
+
+root.innerHTML = `
+<div id="instructionsBackdrop"></div>
+
+<div id="instructionsModal">
+
+  <div id="instructionsHeader">
+    <button id="instructionsBack">←</button>
+    <span id="instructionsTitle">Instructions</span>
+  </div>
+
+  <div id="instructionsContent">
+    ${parseRawInstructions(RAW_TEXT)}
+  </div>
+
+</div>
+`;
+
+document.body.appendChild(root);
+
+
+/* =========================
+   SCROLL LOCK
+========================= */
+
+const modalContent = document.getElementById("instructionsContent");
+
+modalContent.addEventListener("wheel", e=>{
+  e.stopPropagation();
+},{passive:false});
+
+modalContent.addEventListener("touchmove", e=>{
+  e.stopPropagation();
+},{passive:false});
+
+
+/* =========================
+   OPEN / CLOSE
+========================= */
+
+function openModal(){
+  root.style.display="block";
+  document.body.style.overflow="hidden";
+  document.documentElement.style.overflow="hidden";
+}
+
+function closeModal(){
+  root.style.display="none";
+  document.body.style.overflow="";
+  document.documentElement.style.overflow="";
+}
+
+btn.onclick = openModal;
+
+document.getElementById("instructionsBack").onclick = closeModal;
+document.getElementById("instructionsBackdrop").onclick = closeModal;
+
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") closeModal();
+});
+
+/* =========================
+   DYNAMIC BODY PADDING FOR BUTTON
+========================= */
+
+function adjustBodyPadding(){
+  const btnHeight = btn.offsetHeight + -25; // include some gap
+  document.body.style.paddingBottom = `${btnHeight}px`;
+}
+
+// Initial adjustment
+adjustBodyPadding();
+
+// Update if window is resized (responsive)
+window.addEventListener("resize", adjustBodyPadding);
+
+})();
+</script>
 
 <script>
 (function() {
@@ -3476,6 +3376,11 @@ document.addEventListener("DOMContentLoaded", function () {
 })();
 </script>
 
-
 </body>
 </html>
+
+
+
+
+
+
