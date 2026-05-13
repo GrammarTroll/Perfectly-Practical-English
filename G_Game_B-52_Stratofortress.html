@@ -2113,14 +2113,6 @@ window.addEventListener("resize", adjustBodyPadding);
     - Ignore answer banks
     - Ignore instructional text
     - Ignore hidden templates
-
-    REQUIRED CHARACTERISTICS:
-    - must contain pipes
-    - must look structured
-    - must contain score pattern like:
-        2/10
-        20%
-    - should usually contain filename
   */
 
   const PIPE_RULES = {
@@ -2171,11 +2163,17 @@ window.addEventListener("resize", adjustBodyPadding);
       return false;
     }
 
-    if (PIPE_RULES.requirePipe && !str.includes("|")) {
+    if (
+      PIPE_RULES.requirePipe &&
+      !str.includes("|")
+    ) {
       return false;
     }
 
-    if (countPipes(str) < PIPE_RULES.minPipeCount) {
+    if (
+      countPipes(str) <
+      PIPE_RULES.minPipeCount
+    ) {
       return false;
     }
 
@@ -2185,24 +2183,17 @@ window.addEventListener("resize", adjustBodyPadding);
 
     /*
       EXCLUDE RAW TEXT BLOCKS
-
-      If any segment is absurdly long,
-      it is probably question text,
-      answer text,
-      or embedded content.
     */
 
-    const hasHugeText = parts.some(v => v.length > 120);
+    const hasHugeText =
+      parts.some(v => v.length > 120);
 
     if (hasHugeText) {
       return false;
     }
 
     /*
-      REQUIRE:
-      - filename
-      - score fraction
-      - percent
+      REQUIRED PATTERNS
     */
 
     const hasFilename =
@@ -2260,15 +2251,18 @@ window.addEventListener("resize", adjustBodyPadding);
     };
 
     /*
-      SEQUENTIAL LEFT→RIGHT FILL
+      LEFT → RIGHT COLUMN FILL
     */
 
     for (let i = 0; i < MAX_COLS; i++) {
 
       row["c" + (i + 1)] =
+
         parts[i] !== undefined &&
         parts[i] !== ""
+
           ? parts[i]
+
           : null;
     }
 
@@ -2281,7 +2275,9 @@ window.addEventListener("resize", adjustBodyPadding);
 
   async function PIPE(pipeString) {
 
-    if (!isScoreboardPipeString(pipeString)) {
+    if (
+      !isScoreboardPipeString(pipeString)
+    ) {
 
       console.warn(
         "Rejected non-scoreboard pipe string:",
@@ -2293,7 +2289,10 @@ window.addEventListener("resize", adjustBodyPadding);
 
     const row = buildRow(pipeString);
 
-    console.log("PIPE EXPORT:", row);
+    console.log(
+      "📦 PIPE EXPORT:",
+      row
+    );
 
     const { error } = await supabase
       .from("raw_pipe_ingest")
@@ -2315,15 +2314,10 @@ window.addEventListener("resize", adjustBodyPadding);
   }
 
   /* =========================================
-     AUTO SCOREBOARD HUNTER
+     REGEX PIPE HUNTER
      ========================================= */
 
   function huntForScoreboardPipe() {
-
-    /*
-      PRIORITY TARGETS
-      ONLY LOOK IN SCOREBOARD AREAS
-    */
 
     const targets = [
 
@@ -2338,36 +2332,56 @@ window.addEventListener("resize", adjustBodyPadding);
 
     for (const selector of targets) {
 
-      const el = document.querySelector(selector);
+      const el =
+        document.querySelector(selector);
 
       if (!el) {
         continue;
       }
 
       const text =
+
         el.innerText ||
+
         el.textContent ||
+
         "";
 
       /*
-        LOOK LINE BY LINE
+        EXTRACT PIPE CANDIDATES
+        FROM ENTIRE TEXT BLOB
       */
 
-      const lines = text
-        .split("\n")
-        .map(v => v.trim())
-        .filter(Boolean);
+      const matches = text.match(
 
-      for (const line of lines) {
+        /[^\n]{0,200}\|[^\n]{0,200}\|[^\n]{0,200}\|[^\n]{0,200}\|[^\n]{0,200}/g
 
-        if (isScoreboardPipeString(line)) {
+      );
+
+      if (!matches) {
+        continue;
+      }
+
+      for (const candidate of matches) {
+
+        const cleaned =
+          candidate.trim();
+
+        console.log(
+          "🔎 PIPE CANDIDATE:",
+          cleaned
+        );
+
+        if (
+          isScoreboardPipeString(cleaned)
+        ) {
 
           console.log(
             "🎯 SCOREBOARD PIPE FOUND:",
-            line
+            cleaned
           );
 
-          PIPE(line);
+          PIPE(cleaned);
 
           return;
         }
@@ -2375,7 +2389,7 @@ window.addEventListener("resize", adjustBodyPadding);
     }
 
     console.warn(
-      "No scoreboard pipe found"
+      "⚠️ No scoreboard pipe found"
     );
   }
 
@@ -2393,7 +2407,7 @@ window.addEventListener("resize", adjustBodyPadding);
       if (!btn) {
 
         console.warn(
-          "submitBtn not found"
+          "⚠️ submitBtn not found"
         );
 
         return;
@@ -2416,11 +2430,12 @@ window.addEventListener("resize", adjustBodyPadding);
     }
   );
 
-  /*
-    MANUAL ACCESS
-  */
+  /* =========================================
+     GLOBAL ACCESS
+     ========================================= */
 
   window.PIPE = PIPE;
+
   window.huntForScoreboardPipe =
     huntForScoreboardPipe;
 
