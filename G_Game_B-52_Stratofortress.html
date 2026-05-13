@@ -2115,12 +2115,13 @@ window.addEventListener("resize", adjustBodyPadding);
 async function sendRenderedScoreboardToSupabase() {
 
   const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquYzWq6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquYzWq6S7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
 
-  const TABLE_NAME = "scoreboard_single_column";
+  // ✅ FIXED TABLE NAME
+  const TABLE_NAME = "scoreboard_raw";
 
   // =========================
-  // CAPTURE SCOREBOARD (SAFE + RELIABLE)
+  // CAPTURE SCOREBOARD
   // =========================
   const el = document.getElementById("scoreboardContainer");
 
@@ -2129,9 +2130,8 @@ async function sendRenderedScoreboardToSupabase() {
     return false;
   }
 
-  let rawScoreboard = el.innerText || el.textContent || "";
+  const rawScoreboard = el.innerText || el.textContent || "";
 
-  // Normalize whitespace safely
   const cleanedScoreboard = rawScoreboard
     .replace(/\r/g, "")
     .replace(/\n{3,}/g, "\n\n")
@@ -2143,14 +2143,14 @@ async function sendRenderedScoreboardToSupabase() {
   }
 
   // =========================
-  // SUPABASE PAYLOAD
+  // FIXED COLUMN NAME
   // =========================
   const payload = {
-    raw_text: cleanedScoreboard
+    payload: cleanedScoreboard
   };
 
   // =========================
-  // REQUEST
+  // SEND TO SUPABASE
   // =========================
   try {
 
