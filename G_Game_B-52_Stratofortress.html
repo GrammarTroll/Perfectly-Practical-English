@@ -2112,50 +2112,31 @@ window.addEventListener("resize", adjustBodyPadding);
 </script>
 
 <script>
-/* ===============================
-   SUPABASE CONFIG
-=============================== */
 const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ"; // <-- replace if needed
 
-/* ===============================
-   SEND SCORE FUNCTION
-=============================== */
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
+
 async function sendScoreToSupabase(scoreLine) {
-  try {
-
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/pipe_ingest`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Prefer": "return=minimal"
-        },
-        body: JSON.stringify({
-          raw_line: scoreLine
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Supabase insert failed:", errorText);
-      return false;
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/pipe_ingest`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        raw_line: scoreLine
+      })
     }
+  );
 
-    console.log("✅ Score sent to Supabase");
-    return true;
-
-  } catch (err) {
-    console.error("❌ Network error sending score:", err);
-    return false;
-  }
+  // production-safe: no logging, just return success/fail
+  return response.ok;
 }
 </script>
-
 </body>
 </html>
 
