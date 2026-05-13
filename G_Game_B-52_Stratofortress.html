@@ -2112,20 +2112,28 @@ window.addEventListener("resize", adjustBodyPadding);
 </script>
 
 <script>
-(function () {
+async function copyAndSendScoreboard() {
 
   const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
 
-  let hasSent = false;
-  let debounceTimer = null;
+  const el = document.getElementById("scoreboardContainer");
+  if (!el) return;
 
-  async function sendScore(text) {
-    if (hasSent) return;
+  const text = (el.textContent || "").trim();
+  if (!text) return;
 
-    hasSent = true;
+  // 1. copy (same as your button behavior)
+  try {
+    await navigator.clipboard.writeText(text);
+    console.log("Score copied");
+  } catch (err) {
+    console.warn("Clipboard failed:", err);
+  }
 
-    await fetch(`${SUPABASE_URL}/rest/v1/scoreboard_raw`, {
+  // 2. send to Supabase
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/scoreboard_raw`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -2137,53 +2145,18 @@ window.addEventListener("resize", adjustBodyPadding);
         id: "GLOBAL_SCOREBOARD",
         payload: text
       })
-    }).catch(err => {
-      console.error("Supabase send failed:", err);
-      hasSent = false; // allow retry if it failed
     });
+
+    if (!res.ok) {
+      console.error("Supabase failed:", await res.text());
+    } else {
+      console.log("Score sent to Supabase");
+    }
+
+  } catch (err) {
+    console.error("Network error:", err);
   }
-
-  function isValidScore(text) {
-    return (
-      typeof text === "string" &&
-      text.includes("|") &&
-      text.length > 10
-    );
-  }
-
-  function checkAndSend() {
-    const el = document.getElementById("scoreboardContainer");
-    if (!el) return;
-
-    const text = (el.textContent || "").trim();
-
-    if (!isValidScore(text)) return;
-
-    sendScore(text);
-  }
-
-  const target = document.getElementById("scoreboardContainer");
-  if (!target) return;
-
-  const observer = new MutationObserver(() => {
-
-    clearTimeout(debounceTimer);
-
-    debounceTimer = setTimeout(() => {
-      checkAndSend();
-    }, 500); // 🔥 wait for final state to settle
-
-  });
-
-  observer.observe(target, {
-    childList: true,
-    subtree: true,
-    characterData: true
-  });
-
-  console.log("Supabase sender armed (stable mode)");
-
-})();
+}
 </script>
 </body>
 </html>
