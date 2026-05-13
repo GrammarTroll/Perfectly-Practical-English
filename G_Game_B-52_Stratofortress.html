@@ -1764,9 +1764,9 @@ function generateMCOptions(correct, pool) {
 </script>
 
 <script>
-
-if (window.gamePausedByVisibility) return;
-
+if (window.gamePausedByVisibility) {
+  console.log("Game paused by visibility");
+}
 </script>
 
 <script>
@@ -2087,8 +2087,7 @@ window.addEventListener("resize", adjustBodyPadding);
      SUPABASE CONFIG
      ========================= */
   const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-  const SUPABASE_KEY = "PASTE_YOUR_ANON_KEY_HERE";
-
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
   const supabase = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
@@ -2097,46 +2096,40 @@ window.addEventListener("resize", adjustBodyPadding);
   const MAX_COLS = 10;
 
   /* =========================
-     PIPE FUNCTION (CORE ENGINE)
+     PIPE FUNCTION (FINAL VERSION)
      ========================= */
   async function PIPE(pipeString) {
 
-    // convert to array
-    let parts = String(pipeString)
+    const parts = String(pipeString)
       .split("|")
       .map(v => v?.trim() ?? "");
 
-    // metadata
-    const fieldCount = parts.length;
+    // fill up to 10 columns
+    const row = {
+      c1: parts[0] || null,
+      c2: parts[1] || null,
+      c3: parts[2] || null,
+      c4: parts[3] || null,
+      c5: parts[4] || null,
+      c6: parts[5] || null,
+      c7: parts[6] || null,
+      c8: parts[7] || null,
+      c9: parts[8] || null,
+      c10: parts[9] || null,
 
-    // preserve raw
-    const raw = parts.join("|");
+      source_page: location.pathname,
+      field_count: parts.length,
+      created_at: new Date().toISOString()
+    };
 
-    // normalize to 10 columns
-    const fixed = [...parts];
-    while (fixed.length < MAX_COLS) fixed.push(null);
-    fixed.length = MAX_COLS;
-
-    // A–J mapping
-    const payload = {};
-    for (let i = 0; i < MAX_COLS; i++) {
-      payload[String.fromCharCode(65 + i)] = fixed[i];
-    }
-
-    // insert
     const { error } = await supabase
-      .from("raw_pipe_ingest")
-      .insert([{
-        raw,
-        payload,
-        field_count: fieldCount,
-        source_page: location.pathname
-      }]);
+      .from("raw_pipe_ingest")   // MUST match your Supabase table name
+      .insert([row]);
 
     if (error) {
       console.error("❌ PIPE ERROR:", error);
     } else {
-      console.log("✅ PIPE SENT:", raw);
+      console.log("✅ PIPE SENT:", row);
     }
   }
 
