@@ -2116,24 +2116,16 @@ window.addEventListener("resize", adjustBodyPadding);
 <script>
 (function () {
 
-  /* =========================================
-     SAFETY BOOT CHECK
-     ========================================= */
-
   if (!window.supabase) {
     console.error("[PIPE] Supabase library failed to load.");
     return;
   }
 
-  /* =========================================
-     SUPABASE CONFIG
-     ========================================= */
-
   const SUPABASE_URL =
     "https://etwwriloppklhhkmswpr.supabase.co";
 
   const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
+    "YOUR_KEY_HERE";
 
   let supabase = null;
 
@@ -2151,16 +2143,12 @@ window.addEventListener("resize", adjustBodyPadding);
 
   let lastExportedPipe = null;
 
-  /* =========================================
-     LOG HELPERS
-     ========================================= */
-
   const log = (...a) => console.log("[PIPE]", ...a);
   const warn = (...a) => console.warn("[PIPE]", ...a);
   const error = (...a) => console.error("[PIPE]", ...a);
 
   /* =========================================
-     SAFE HELPERS (NEW)
+     SAFE HELPERS
      ========================================= */
 
   const safeString = (v) =>
@@ -2171,10 +2159,10 @@ window.addEventListener("resize", adjustBodyPadding);
     return s ? s.trim() : null;
   };
 
-  const safeISO = () => new Date().toISOString();
+  const isoNow = () => new Date().toISOString();
 
   /* =========================================
-     VALIDATOR
+     VALIDATION
      ========================================= */
 
   function isScoreboardPipeString(str) {
@@ -2197,7 +2185,7 @@ window.addEventListener("resize", adjustBodyPadding);
   }
 
   /* =========================================
-     ROW BUILDER (HARDENED)
+     ROW BUILDER (STRICT FIX)
      ========================================= */
 
   function buildRow(pipeString) {
@@ -2208,26 +2196,22 @@ window.addEventListener("resize", adjustBodyPadding);
       raw_string: safeString(pipeString) || "",
       field_count: parts.length,
       source_page: location.pathname || "unknown",
-      created_at: safeISO()
+      created_at: isoNow()
     };
 
+    // FORCE EXACT COLUMN SHAPE
     for (let i = 0; i < MAX_COLS; i++) {
-      const val = parts[i];
-
-      row["c" + (i + 1)] =
-        val !== undefined && val !== ""
-          ? safeTrim(val)
-          : null;
+      row[`c${i + 1}`] = safeTrim(parts[i]) || null;
     }
 
     return row;
   }
 
   /* =========================================
-     CLEAN INSERT WRAPPER (NEW)
+     SUPABASE SAFETY CLEANER
      ========================================= */
 
-  function sanitizeForSupabase(row) {
+  function sanitize(row) {
     const clean = {};
 
     for (const [k, v] of Object.entries(row)) {
@@ -2238,34 +2222,25 @@ window.addEventListener("resize", adjustBodyPadding);
   }
 
   /* =========================================
-     PIPE EXPORT
+     PIPE INSERT
      ========================================= */
 
   async function PIPE(pipeString) {
 
     try {
 
-      if (!supabase) {
-        warn("Supabase not ready");
-        return;
-      }
-
-      if (!pipeString || typeof pipeString !== "string") {
-        warn("Invalid input");
-        return;
-      }
+      if (!supabase) return warn("Supabase not ready");
+      if (typeof pipeString !== "string") return warn("Invalid input");
 
       if (pipeString === lastExportedPipe) {
-        warn("Duplicate blocked");
-        return;
+        return warn("Duplicate blocked");
       }
 
       if (!isScoreboardPipeString(pipeString)) {
-        warn("Rejected:", pipeString);
-        return;
+        return warn("Rejected:", pipeString);
       }
 
-      const row = sanitizeForSupabase(buildRow(pipeString));
+      const row = sanitize(buildRow(pipeString));
 
       log("INSERT ROW:", row);
 
@@ -2275,15 +2250,14 @@ window.addEventListener("resize", adjustBodyPadding);
         .select();
 
       if (err) {
-        error("INSERT FAILED (DETAILS):", err);
+        error("❌ SUPABASE ERROR:");
+        console.error(err);
         return;
       }
 
-      log("SUPABASE RESPONSE:", data);
+      log("✅ SUCCESS:", data);
 
       lastExportedPipe = pipeString;
-
-      log("✅ INSERT SUCCESS");
 
     } catch (err) {
       error("PIPE CRASH:", err);
@@ -2291,7 +2265,7 @@ window.addEventListener("resize", adjustBodyPadding);
   }
 
   /* =========================================
-     PIPE HUNTER
+     HUNTER
      ========================================= */
 
   function huntForScoreboardPipe() {
@@ -2321,17 +2295,10 @@ window.addEventListener("resize", adjustBodyPadding);
 
         for (const el of elements) {
 
-          const text =
-            el.innerText ||
-            el.textContent ||
-            "";
-
+          const text = el.innerText || el.textContent || "";
           if (!text) continue;
 
-          const lines = text
-            .split("\n")
-            .map(v => v.trim())
-            .filter(Boolean);
+          const lines = text.split("\n").map(v => v.trim());
 
           for (const line of lines) {
             if (isScoreboardPipeString(line)) {
@@ -2375,10 +2342,6 @@ window.addEventListener("resize", adjustBodyPadding);
       "#submitBtn, #finishBtn, #doneBtn, #resultsBtn, button"
     );
 
-    if (!buttons.length) {
-      warn("No buttons found");
-    }
-
     buttons.forEach(btn => {
       btn.addEventListener("click", () => {
         log("CLICK DETECTED");
@@ -2388,10 +2351,6 @@ window.addEventListener("resize", adjustBodyPadding);
 
     setTimeout(huntForScoreboardPipe, 3000);
   });
-
-  /* =========================================
-     GLOBAL ACCESS
-     ========================================= */
 
   window.PIPE = PIPE;
   window.huntForScoreboardPipe = huntForScoreboardPipe;
