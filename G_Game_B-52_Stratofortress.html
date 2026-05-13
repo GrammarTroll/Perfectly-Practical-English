@@ -2112,45 +2112,41 @@ window.addEventListener("resize", adjustBodyPadding);
 </script>
 
 <script>
-const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ"; // (don’t hardcode real keys in public code long-term)
+const SUPABASE = Object.freeze({
+  URL: "https://etwwriloppklhhkmswpr.supabase.co",
+  KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ"
+});
 
 async function sendScoreToSupabase(scoreLine) {
+  if (!scoreLine || typeof scoreLine !== "string") return false;
+
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/pipe_ingest`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Prefer": "return=representation"
-        },
-        body: JSON.stringify({
-          raw_line: scoreLine
-        })
-      }
-    );
+    const res = await fetch(`${SUPABASE.URL}/rest/v1/pipe_ingest`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE.KEY,
+        "Authorization": `Bearer ${SUPABASE.KEY}`,
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify({ raw_line: scoreLine })
+    });
 
-    const text = await response.text();
+    const data = await res.text();
 
-    // IMPORTANT: surface real Supabase errors
-    if (!response.ok) {
-      console.error("Supabase insert failed:", response.status, text);
+    if (!res.ok) {
+      console.error("Supabase insert failed:", res.status, data);
       return false;
     }
 
-    console.log("Supabase insert success:", text);
     return true;
 
   } catch (err) {
-    console.error("Network/Fetch error:", err);
+    console.error("Supabase network error:", err);
     return false;
   }
 }
 </script>
-
 
 </body>
 </html>
