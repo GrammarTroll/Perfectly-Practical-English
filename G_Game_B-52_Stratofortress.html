@@ -2114,55 +2114,73 @@ window.addEventListener("resize", adjustBodyPadding);
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+/* =========================================
+   SUPABASE INIT (REQUIRED — DO NOT REMOVE)
+   ========================================= */
+
+const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+
+window.supabase = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+
+/* =========================================
+   PIPE → SUPABASE INGEST FUNCTION
+   ========================================= */
+
 async function PIPE(pipeString) {
 
   try {
 
-    if (!window.supabase) {
+    // Ensure Supabase is actually usable
+    if (!window.supabase || !window.supabase.from) {
       console.warn("[PIPE] Supabase not ready");
       return;
     }
 
-    if (!pipeString || typeof pipeString !== "string") {
+    // Validate input
+    if (typeof pipeString !== "string" || pipeString.trim() === "") {
       console.warn("[PIPE] Invalid input");
       return;
     }
 
     console.log("[PIPE INPUT]", pipeString);
 
+    // Split pipe safely
     const parts = pipeString.split("|").map(v => (v || "").trim());
 
-    const safeParts = Array.from({ length: 10 }, (_, i) =>
-      parts[i] ?? null
-    );
-
+    // Build row safely (no undefined leakage)
     const row = {
       raw_string: pipeString,
       field_count: parts.length,
       source_page: location.pathname || "unknown",
       created_at: new Date().toISOString(),
 
-      c1: safeParts[0],
-      c2: safeParts[1],
-      c3: safeParts[2],
-      c4: safeParts[3],
-      c5: safeParts[4],
-      c6: safeParts[5],
-      c7: safeParts[6],
-      c8: safeParts[7],
-      c9: safeParts[8],
-      c10: safeParts[9],
+      c1: parts[0] ?? null,
+      c2: parts[1] ?? null,
+      c3: parts[2] ?? null,
+      c4: parts[3] ?? null,
+      c5: parts[4] ?? null,
+      c6: parts[5] ?? null,
+      c7: parts[6] ?? null,
+      c8: parts[7] ?? null,
+      c9: parts[8] ?? null,
+      c10: parts[9] ?? null,
     };
 
     console.log("[PIPE ROW]", row);
 
+    // Insert into Supabase
     const { data, error } = await window.supabase
       .from("raw_pipe_ingest")
-      .insert([row])
+      .insert(row)
       .select();
 
     if (error) {
-      console.error("[PIPE SUPABASE ERROR]", error);
+      console.error("[PIPE SUPABASE ERROR]", error.message);
       return;
     }
 
