@@ -2083,78 +2083,22 @@ window.addEventListener("resize", adjustBodyPadding);
 <script>
 (function () {
 
-  /* =========================================
-     SUPABASE
-     ========================================= */
-
   const SUPABASE_URL =
     "https://etwwriloppklhhkmswpr.supabase.co";
 
   const SUPABASE_KEY =
     "YOUR_KEY";
 
-  const supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
-
-  /* =========================================
-     CONFIG
-     ========================================= */
+  const supabase =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
 
   const MAX_COLS = 10;
 
-  /*
-    SCOREBOARD PIPE HUNTER
-
-    GOAL:
-    - Find ONLY scoreboard-style pipe strings
-    - Ignore raw content text
-    - Ignore answer banks
-    - Ignore instructional text
-    - Ignore hidden templates
-  */
-
-  const PIPE_RULES = {
-
-    requirePipe: true,
-
-    requireScoreFraction: true,
-
-    requirePercent: true,
-
-    requireFilename: true,
-
-    minPipeCount: 4
-
-  };
-
   /* =========================================
-     HELPERS
-     ========================================= */
-
-  function looksLikeFilename(v) {
-
-    return /\.html?$/i.test(v || "");
-  }
-
-  function looksLikeScore(v) {
-
-    return /^\d+\s*\/\s*\d+$/.test(v || "");
-  }
-
-  function looksLikePercent(v) {
-
-    return /^\d+(\.\d+)?%$/.test(v || "");
-  }
-
-  function countPipes(str) {
-
-    return (str.match(/\|/g) || []).length;
-  }
-
-  /* =========================================
-     VALIDATE SCOREBOARD STRING
+     VALIDATOR
      ========================================= */
 
   function isScoreboardPipeString(str) {
@@ -2163,17 +2107,7 @@ window.addEventListener("resize", adjustBodyPadding);
       return false;
     }
 
-    if (
-      PIPE_RULES.requirePipe &&
-      !str.includes("|")
-    ) {
-      return false;
-    }
-
-    if (
-      countPipes(str) <
-      PIPE_RULES.minPipeCount
-    ) {
+    if (!str.includes("|")) {
       return false;
     }
 
@@ -2181,52 +2115,21 @@ window.addEventListener("resize", adjustBodyPadding);
       .split("|")
       .map(v => v.trim());
 
-    /*
-      EXCLUDE RAW TEXT BLOCKS
-    */
-
-    const hasHugeText =
-      parts.some(v => v.length > 120);
-
-    if (hasHugeText) {
+    if (parts.length < 5) {
       return false;
     }
-
-    /*
-      REQUIRED PATTERNS
-    */
-
-    const hasFilename =
-      parts.some(looksLikeFilename);
 
     const hasScore =
-      parts.some(looksLikeScore);
+      parts.some(v =>
+        /^\d+\/\d+$/.test(v)
+      );
 
     const hasPercent =
-      parts.some(looksLikePercent);
+      parts.some(v =>
+        /^\d+(\.\d+)?%$/.test(v)
+      );
 
-    if (
-      PIPE_RULES.requireFilename &&
-      !hasFilename
-    ) {
-      return false;
-    }
-
-    if (
-      PIPE_RULES.requireScoreFraction &&
-      !hasScore
-    ) {
-      return false;
-    }
-
-    if (
-      PIPE_RULES.requirePercent &&
-      !hasPercent
-    ) {
-      return false;
-    }
-
-    return true;
+    return hasScore && hasPercent;
   }
 
   /* =========================================
@@ -2247,12 +2150,9 @@ window.addEventListener("resize", adjustBodyPadding);
 
       source_page: location.pathname,
 
-      created_at: new Date().toISOString()
+      created_at:
+        new Date().toISOString()
     };
-
-    /*
-      LEFT → RIGHT COLUMN FILL
-    */
 
     for (let i = 0; i < MAX_COLS; i++) {
 
@@ -2275,169 +2175,56 @@ window.addEventListener("resize", adjustBodyPadding);
 
   async function PIPE(pipeString) {
 
+    console.log(
+      "RAW PIPE INPUT:",
+      pipeString
+    );
+
     if (
       !isScoreboardPipeString(pipeString)
     ) {
 
       console.warn(
-        "Rejected non-scoreboard pipe string:",
-        pipeString
+        "Rejected pipe string"
       );
 
       return;
     }
 
-    const row = buildRow(pipeString);
+    const row =
+      buildRow(pipeString);
 
     console.log(
-      "📦 PIPE EXPORT:",
+      "FINAL ROW:",
       row
     );
 
-    const { error } = await supabase
-      .from("raw_pipe_ingest")
-      .insert([row]);
+    const { data, error } =
+      await supabase
+        .from("raw_pipe_ingest")
+        .insert([row]);
 
     if (error) {
 
       console.error(
-        "❌ PIPE ERROR:",
+        "❌ SUPABASE ERROR:",
         error
       );
 
     } else {
 
       console.log(
-        "✅ SCOREBOARD PIPE SENT"
+        "✅ INSERT SUCCESS",
+        data
       );
     }
   }
 
-  /* =========================================
-     REGEX PIPE HUNTER
-     ========================================= */
-
-  function huntForScoreboardPipe() {
-
-    const targets = [
-
-      "#scoreboard",
-      "#scoreOutput",
-      ".scoreboard",
-      ".results",
-      ".finalScore",
-      "body"
-
-    ];
-
-    for (const selector of targets) {
-
-      const el =
-        document.querySelector(selector);
-
-      if (!el) {
-        continue;
-      }
-
-      const text =
-
-        el.innerText ||
-
-        el.textContent ||
-
-        "";
-
-      /*
-        EXTRACT PIPE CANDIDATES
-        FROM ENTIRE TEXT BLOB
-      */
-
-      const matches = text.match(
-
-        /[^\n]{0,200}\|[^\n]{0,200}\|[^\n]{0,200}\|[^\n]{0,200}\|[^\n]{0,200}/g
-
-      );
-
-      if (!matches) {
-        continue;
-      }
-
-      for (const candidate of matches) {
-
-        const cleaned =
-          candidate.trim();
-
-        console.log(
-          "🔎 PIPE CANDIDATE:",
-          cleaned
-        );
-
-        if (
-          isScoreboardPipeString(cleaned)
-        ) {
-
-          console.log(
-            "🎯 SCOREBOARD PIPE FOUND:",
-            cleaned
-          );
-
-          PIPE(cleaned);
-
-          return;
-        }
-      }
-    }
-
-    console.warn(
-      "⚠️ No scoreboard pipe found"
-    );
-  }
-
-  /* =========================================
-     AUTO HOOK
-     ========================================= */
-
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-      const btn =
-        document.getElementById("submitBtn");
-
-      if (!btn) {
-
-        console.warn(
-          "⚠️ submitBtn not found"
-        );
-
-        return;
-      }
-
-      btn.addEventListener(
-        "click",
-        () => {
-
-          setTimeout(
-            huntForScoreboardPipe,
-            500
-          );
-        }
-      );
-
-      console.log(
-        "✅ SCOREBOARD PIPE HUNTER ACTIVE"
-      );
-    }
-  );
-
-  /* =========================================
-     GLOBAL ACCESS
-     ========================================= */
+  /*
+    GLOBAL ACCESS
+  */
 
   window.PIPE = PIPE;
-
-  window.huntForScoreboardPipe =
-    huntForScoreboardPipe;
 
 })();
 </script>
