@@ -2112,40 +2112,72 @@ window.addEventListener("resize", adjustBodyPadding);
 </script>
 
 <script>
-const SUPABASE = Object.freeze({
-  URL: "https://etwwriloppklhhkmswpr.supabase.co",
-  KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ"
-});
+async function sendRenderedScoreboardToSupabase() {
 
-async function sendScoreToSupabase(scoreLine) {
-  if (!scoreLine || typeof scoreLine !== "string") return false;
+  // =========================
+  // CONFIG (self-contained)
+  // =========================
+  const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquYzWq6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
 
+  const TABLE_NAME = "scoreboard_single_column";
+
+  // =========================
+  // CAPTURE RENDERED SCOREBOARD
+  // =========================
+  const scoreboardEl = document.getElementById("scoreboardContainer");
+
+  const rawScoreboard =
+    scoreboardEl?.innerText ||
+    scoreboardEl?.textContent ||
+    "";
+
+  const cleanedScoreboard = rawScoreboard
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  // =========================
+  // BUILD PAYLOAD (SINGLE COLUMN)
+  // =========================
+  const payload = {
+    raw_text: cleanedScoreboard
+  };
+
+  // =========================
+  // SEND TO SUPABASE (SELF-CONTAINED FETCH)
+  // =========================
   try {
-    const res = await fetch(`${SUPABASE.URL}/rest/v1/pipe_ingest`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE.KEY,
-        "Authorization": `Bearer ${SUPABASE.KEY}`,
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify({ raw_line: scoreLine })
-    });
 
-    const data = await res.text();
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/${TABLE_NAME}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
 
-    if (!res.ok) {
-      console.error("Supabase insert failed:", res.status, data);
+    const text = await response.text();
+
+    if (!response.ok) {
+      console.error("❌ Supabase insert failed:", response.status, text);
       return false;
     }
 
+    console.log("✅ Scoreboard successfully stored:", text);
     return true;
 
   } catch (err) {
-    console.error("Supabase network error:", err);
+    console.error("❌ Network / fetch error:", err);
     return false;
   }
 }
+
 </script>
 
 </body>
