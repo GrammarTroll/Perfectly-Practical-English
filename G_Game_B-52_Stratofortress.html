@@ -2115,73 +2115,31 @@ window.addEventListener("resize", adjustBodyPadding);
 async function sendRenderedScoreboardToSupabase() {
 
   const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquYzWq6S7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE";
 
-  // ✅ FIXED TABLE NAME
-  const TABLE_NAME = "scoreboard_raw";
-
-  // =========================
-  // CAPTURE SCOREBOARD
-  // =========================
   const el = document.getElementById("scoreboardContainer");
+  if (!el) return false;
 
-  if (!el) {
-    console.error("❌ scoreboardContainer not found");
-    return false;
-  }
-
-  const rawScoreboard = el.innerText || el.textContent || "";
-
-  const cleanedScoreboard = rawScoreboard
+  const cleaned = (el.innerText || "")
     .replace(/\r/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  if (!cleanedScoreboard) {
-    console.warn("⚠️ Scoreboard is empty — nothing sent");
-    return false;
-  }
+  if (!cleaned) return false;
 
-  // =========================
-  // FIXED COLUMN NAME
-  // =========================
-  const payload = {
-    payload: cleanedScoreboard
-  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/scoreboard_raw`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+    },
+    body: JSON.stringify({
+      payload: cleaned
+    })
+  });
 
-  // =========================
-  // SEND TO SUPABASE
-  // =========================
-  try {
-
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/${TABLE_NAME}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Prefer": "return=representation"
-        },
-        body: JSON.stringify(payload)
-      }
-    );
-
-    const resultText = await response.text();
-
-    if (!response.ok) {
-      console.error("❌ Supabase error:", response.status, resultText);
-      return false;
-    }
-
-    console.log("✅ Scoreboard stored successfully:", resultText);
-    return true;
-
-  } catch (err) {
-    console.error("❌ Network error:", err);
-    return false;
-  }
+  return res.ok;
 }
 </script>
 
