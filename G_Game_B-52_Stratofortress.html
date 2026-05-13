@@ -2114,106 +2114,80 @@ window.addEventListener("resize", adjustBodyPadding);
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-/* =========================================
-   SUPABASE INIT (SAFE + CDN RELIABLE)
-   ========================================= */
-
 const SUPABASE_URL = "https://etwwriloppklhhkmswpr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ";
 
 let client = null;
 
-/* FIX: wait for CDN to actually exist */
-function initSupabase() {
-  if (!window.supabase || !window.supabase.createClient) {
-    console.error("[SUPABASE] library not loaded yet");
-    return null;
+/* HARD INIT (wait until library exists) */
+function boot() {
+  if (!window.supabase) {
+    console.error("Supabase library not loaded");
+    return;
   }
 
-  return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-/* initialize safely after load */
-function bootSupabase() {
-  client = initSupabase();
+  client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   window.supabaseClient = client;
+
+  console.log("Supabase ready");
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", bootSupabase);
-} else {
-  bootSupabase();
-}
+window.addEventListener("load", boot);
 
 
 /* =========================================
-   PIPE → SUPABASE INGEST FUNCTION
+   FORCE PIPE (this is your bridge)
    ========================================= */
 
-async function PIPE(pipeString) {
+window.PIPE = async function (scoreboardData) {
 
   try {
-
-    // HARD safety check
     if (!window.supabaseClient) {
-      console.warn("[PIPE] Supabase not initialized yet");
+      console.error("Supabase not ready yet");
       return;
     }
 
-    if (!window.supabaseClient.from) {
-      console.warn("[PIPE] Supabase client invalid");
+    if (!scoreboardData) {
+      console.error("No data received from scoreboard");
       return;
     }
 
-    // Validate input
-    if (typeof pipeString !== "string" || !pipeString.trim()) {
-      console.warn("[PIPE] Invalid input");
-      return;
-    }
+    // FORCE everything into a string + split
+    const raw = String(scoreboardData);
+    const parts = raw.split("|");
 
-    console.log("[PIPE INPUT]", pipeString);
-
-    // Split safely
-    const parts = pipeString.split("|").map(v => (v || "").trim());
-
-    // Build row
     const row = {
-      raw_string: pipeString,
-      field_count: parts.length,
-      source_page: location.pathname || "unknown",
-      created_at: new Date().toISOString(),
+      c1: parts[0] || null,
+      c2: parts[1] || null,
+      c3: parts[2] || null,
+      c4: parts[3] || null,
+      c5: parts[4] || null,
+      c6: parts[5] || null,
+      c7: parts[6] || null,
+      c8: parts[7] || null,
+      c9: parts[8] || null,
+      c10: parts[9] || null,
 
-      c1: parts[0] ?? null,
-      c2: parts[1] ?? null,
-      c3: parts[2] ?? null,
-      c4: parts[3] ?? null,
-      c5: parts[4] ?? null,
-      c6: parts[5] ?? null,
-      c7: parts[6] ?? null,
-      c8: parts[7] ?? null,
-      c9: parts[8] ?? null,
-      c10: parts[9] ?? null,
+      field_count: parts.length,
+      source_page: location.pathname,
+      created_at: new Date().toISOString()
     };
 
-    console.log("[PIPE ROW]", row);
-
-    // Insert into Supabase
-    const { data, error } = await window.supabaseClient
+    const { error } = await window.supabaseClient
       .from("raw_pipe_ingest")
-      .insert([row])
-      .select();
+      .insert([row]);
 
     if (error) {
-      console.error("[PIPE SUPABASE ERROR]", error.message, error);
+      console.error("SUPABASE INSERT FAILED:", error);
       return;
     }
 
-    console.log("[PIPE SUCCESS]", data);
+    console.log("INSERT SUCCESS:", row);
 
-  } catch (err) {
-    console.error("[PIPE CRASH]", err);
+  } catch (e) {
+    console.error("PIPE CRASH:", e);
   }
-}
+};
 </script>
 
 </body>
