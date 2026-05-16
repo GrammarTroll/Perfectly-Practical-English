@@ -5571,11 +5571,11 @@ kicked out
 
 
 <!-- ================= HARD-CODED TOC ================= -->
-<div id="layout">
+  <!-- <div id="layout">
 
 <h1 data-auto-title></h1>
 
-  <div class="container">
+<div class="container">
     <div class="column">
       <h2>Old Testament</h2>
       <ul class="index">
@@ -5593,7 +5593,7 @@ kicked out
     </div>
   </div>
 
-</div>
+</div>-->
 <!-- END #layout -->
 
 
@@ -5611,34 +5611,35 @@ kicked out
   </div>
 </div>
 
-
-
-
-<!-- ================= MEMORY VERSE WINDOW ================= -->
-<div id="mvWindow">
-  <div id="mvBookName">Memory Verse</div>
-  <div id="mvTextContainer" contenteditable="true"></div>
-</div>
-
 <!-- ================= QUIZ MODAL ================= -->
 <div id="modalRoot">
   <div id="quizModal">
 
+<!--<div id="helloBar">Hello!</div> -->
+
     <!-- CONTROL BARS LIVE HERE -->
-    <!--<div id="chapterVerseControls">
+    <div id="chapterVerseControls">
       <div class="controlRow">
-        <select id="chapterSelect"></select>
-        <select id="verseSelect"></select>
-        <button id="goBtn">Go</button>
-        <button id="quizBtn">Go to Quiz</button>
+
+<button id="instructionsBtn">Instructions</button>
+<!-- <select id="chapterSelect"></select> -->
+
+<button id="strategiesBtn">Strategies</button>
+<!-- <select id="verseSelect"></select> -->
+
+<button id="signalwordsBtn">Signals</button>
+<!-- <button id="goBtn">Go</button> -->
+
+<button onclick="goToNextQuiz()">Go to Quiz</button>
+
       </div>
-    </div>-->
+    </div>
 
     <div id="readaloudControls">
       <div class="controlRow">
         <button id="highlightSelected">Highlight</button>
         <button id="copySelected">Copy</button>
-        <button id="startBtn">Start/Stop</button>
+        <button id="startBtn">Audio</button>
         <button id="closeModalBtn">Close</button>
       </div>
     </div>
@@ -5651,58 +5652,87 @@ kicked out
   </div>
 </div>
 
-
-
-
-
 <script>
 
 (function(){
 
+
+  // [1] GET INPUT SOURCE
   const src = document.getElementById("rawTextSource");
-  if(!src) return;
+  if (!src) return;
 
   const raw = src.textContent.trim();
   const lines = raw.split("\n");
 
+  // [2] REGEX RULES
   const urlRegex = /^https?:\/\/\S+$/i;
   const urlAnywhere = /(https?:\/\/\S+)/gi;
 
-  const result = [];
+  // [3] BUILD OUTPUT ARRAYS
+  const htmlResult = [];
+  const speechChunks = [];
 
-  for(let i=0;i<lines.length;i++){
+  // [4] PARSE LOOP (UNCHANGED LOGIC)
+  for (let i = 0; i < lines.length; i++) {
 
     let line = lines[i].trim();
-    let next = (lines[i+1] || "").trim();
+    let next = (lines[i + 1] || "").trim();
 
-    // Title followed by URL
-    if(line && !urlRegex.test(line) && urlRegex.test(next)){
-      result.push(
-        `<a href="${next}" target="_blank" rel="noopener" style="cursor:pointer;text-decoration:underline;">${line}</a>`
+    // TITLE + URL HANDLING
+    if (line && !urlRegex.test(line) && urlRegex.test(next)) {
+
+      htmlResult.push(
+        `<a href="${next}" target="_blank" rel="noopener">${line}</a>`
       );
+
+      speechChunks.push(line);
+
       i++;
       continue;
     }
 
-    // Convert inline URLs
-    line = line.replace(urlAnywhere, url =>
-      `<a href="${url}" target="_blank" rel="noopener" style="cursor:pointer;">${url}</a>`
+    // INLINE URL HANDLING
+    const htmlLine = line.replace(urlAnywhere, url =>
+      `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
     );
 
-    result.push(line);
+    htmlResult.push(htmlLine);
+
+    const cleanText = line.replace(urlAnywhere, "").trim();
+    if (cleanText) {
+      speechChunks.push(cleanText);
+    }
   }
 
-  window.rawText = result.join("\n");
+  // [5] OUTPUT (UNCHANGED — SAFE FOR UI SYSTEM)
+  window.rawText = htmlResult.join("\n");
+
+// SIGNAL: parser is done
+window.parserReady = true;
+
+  // [6] READ-ALOUD HANDOFF (FIXED TO NOT BREAK UI)
+
+  // IMPORTANT:
+  // - no immediate execution
+  // - no blocking
+  // - no fallback globals
+  // - queued after UI thread
+
+  setTimeout(() => {
+    if (typeof window.onParsedTextReady === "function") {
+      window.onParsedTextReady(speechChunks);
+    }
+  }, 0);
 
 })();
+
 </script>
-<!-- ====== 1. Raw Text Quiz Parser ====== -->
-
-
 
 <script>
 (function primeFemaleVoiceOnce() {
   const synth = window.speechSynthesis;
+  if (!synth) return;
+
   let primed = false;
 
   function tryPrime() {
@@ -5720,21 +5750,20 @@ kicked out
 
     const u = new SpeechSynthesisUtterance(" ");
     u.voice = femaleVoice;
-    u.volume = 0; // silent
+    u.volume = 0;
     u.rate = 1;
     u.pitch = 1;
 
+    synth.speak(u);
     primed = true;
   }
 
-  // Try immediately
   tryPrime();
 
-  // Retry when voices load
   synth.onvoiceschanged = tryPrime;
 
-  // Fallback: first user interaction (autoplay-safe)
-  document.addEventListener("click", tryPrime, { once: true });
+  // Better Android + mobile coverage (replaces click + touchstart)
+  document.addEventListener("pointerdown", tryPrime, { once: true });
 })();
 </script>
 
@@ -5742,34 +5771,25 @@ kicked out
 (function () {
 
   function cleanSpeechText(text) {
-
-    /* Remove verse numbers like 1:21 */
     text = text.replace(/\b\d+:\d+\s*/g, '');
-
-    /* Convert <br> tags to spaces */
     text = text.replace(/<br\s*\/?>/gi, ' ');
-
-    /* Convert line breaks to spaces */
     text = text.replace(/\n+/g, ' ');
-
-    /* Remove spaces before periods */
     text = text.replace(/\s+\./g, '.');
-
-    /* Ensure one space after periods */
     text = text.replace(/\.(\S)/g, '. $1');
-
-    /* Collapse multiple spaces */
     text = text.replace(/\s+/g, ' ').trim();
-
     return text;
   }
 
   const OriginalUtterance = window.SpeechSynthesisUtterance;
 
-  window.SpeechSynthesisUtterance = function(text) {
-    text = cleanSpeechText(text);
-    return new OriginalUtterance(text);
-  };
+  function PatchedUtterance(text) {
+    return new OriginalUtterance(cleanSpeechText(text));
+  }
+
+  // 🔧 preserve prototype for Android/WebView compatibility
+  PatchedUtterance.prototype = OriginalUtterance.prototype;
+
+  window.SpeechSynthesisUtterance = PatchedUtterance;
 
 })();
 </script>
@@ -5777,20 +5797,20 @@ kicked out
 <script>
 (function() {
   // ====== 2. Parse Sections ======
-  const segments = window.rawText.split("~").map(s => s.trim()).filter(Boolean);
+const raw = window.rawText;
+
+if (!raw) return; // IMPORTANT: stop if parser not ready
+
+const segments = raw.split("~").map(s => s.trim()).filter(Boolean);
   const sections = [];
 
   for (let i = 0; i < segments.length; i += 2) {
-    const storyBlock = segments[i];
+    const storyBlock = segments[i] || "";
     const questionBlock = segments[i + 1] || '';
 
     const lines = storyBlock.split("\n").map(l => l.trim()).filter(Boolean);
 
-    // --- Determine section title ---
     let titleLine = lines[0] || "Untitled Section";
-    if (titleLine.includes(":")) {
-      titleLine = titleLine;
-    }
 
     sections.push({
       title: titleLine,
@@ -5799,22 +5819,7 @@ kicked out
     });
   }
 
-  window.sections = sections;
-
-// ===== Build fast lookup map for MV buttons =====
-window.sectionMap = {};
-
-sections.forEach(sec => {
-  const title = sec.title.trim();
-
-  // Extract leading number from titles like "1. Genesis"
-  const match = title.match(/^(\d+)/);
-  if (!match) return;
-
-  const number = match[1];
-
-  window.sectionMap[number] = sec.content;
-});
+window.sections = sections;
 
 
   // ====== 3. Build TOC ======
@@ -5834,19 +5839,72 @@ sections.forEach(sec => {
     else rightCol.appendChild(btn);
   });
 
-  // ====== 4. Modal Rendering ======
+// ====== 4. Modal Rendering ======
 window.openQuizModal = function(idx) {
+
   const container = document.getElementById('quizSections');
   container.innerHTML = '';
+
   generateQuizSection(sections[idx], idx);
 
   document.getElementById('modalRoot').classList.add('active');
   document.body.classList.add('modal-open');
 
   moveControlsIntoModal();
+
+  // 📌 Chapter/Verse system (navigation layer)
   buildChapterVerseLogic();
 };
 
+document.addEventListener("click", function(e) {
+
+  const closeBtn = e.target.closest("[data-close-quiz]");
+  if (!closeBtn) return;
+
+  // 🔒 Stronger prevent auto-reopen
+  window.__quizJustClosed = Date.now();
+
+  const modalRoot = document.getElementById("modalRoot");
+  const container = document.getElementById("quizSections");
+
+  // 🔥 1. CLOSE FIRST
+  modalRoot?.classList.remove("active");
+  document.body.classList.remove("modal-open");
+
+  // 🔥 2. Clear content
+  if (container) container.innerHTML = "";
+
+  // 🔥 3. Kill smooth scroll
+  document.documentElement.style.scrollBehavior = "auto";
+
+  // 🔥 4. Immediate reset
+  window.scrollTo(0, 0);
+
+  const modal = document.getElementById("quizModal");
+  if (modal) modal.scrollTop = 0;
+
+  const modalContent = document.getElementById("quizModalContent");
+  if (modalContent) modalContent.scrollTop = 0;
+
+  // 🔥 5. Prevent browser restoring old position
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+
+  if (window.resetQuizScrollState) {
+    window.resetQuizScrollState();
+  }
+
+  // 🔥 FINAL OVERRIDE (critical)
+  setTimeout(() => {
+    window.scrollTo(0, 0);
+  }, 0);
+
+  requestAnimationFrame(() => {
+    window.scrollTo(0, 0);
+  });
+
+});
 
 function generateQuizSection(section, idx) {
   const container = document.getElementById('quizSections');
@@ -6223,37 +6281,121 @@ correctAnswers += Number(ex.dataset.score || 0);
     return pre.toString().length;
   }
 
+/* =========================================================
+   MOBILE CHUNKING (ADD HERE)
+========================================================= */
+
+function buildChunks(text) {
+
+  const MAX = /Mobi|Android/i.test(navigator.userAgent) ? 120 : 180;
+
+  const sentences = text
+    .replace(/([.?!]+)\s+/g, "$1|")
+    .split("|")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const chunks = [];
+  let buffer = "";
+
+  for (let s of sentences) {
+
+    // 🔥 handle very long sentences safely
+    if (s.length > MAX) {
+      for (let i = 0; i < s.length; i += MAX) {
+        chunks.push(s.slice(i, i + MAX));
+      }
+      continue;
+    }
+
+    if ((buffer + s).length > MAX) {
+      if (buffer.trim()) chunks.push(buffer.trim());
+      buffer = s + " ";
+    } else {
+      buffer += s + " ";
+    }
+  }
+
+  if (buffer.trim()) chunks.push(buffer.trim());
+
+  return chunks;
+}
+
+
+
+
+
 
   /* =========================================================
      SPEAK FROM CURSOR
   ========================================================= */
-  function speakFrom(container, offset) {
-    const fullText = container.textContent || "";
-    const text = fullText.slice(offset).trim();
-    if (!text) return;
+function speakFrom(container, offset) {
 
-    utterance = new SpeechSynthesisUtterance(text);
+  const fullText = container.textContent || "";
+  const text = fullText.slice(offset);
+  if (!text.trim()) return;
+
+  const chunks = [];
+  const MAX = /Mobi|Android/i.test(navigator.userAgent) ? 120 : 180;
+
+  // --- sentence-based chunking ---
+  const sentences = text
+    .replace(/([.?!])\s+/g, "$1|")
+    .split("|")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  let buffer = "";
+  for (let s of sentences) {
+    if ((buffer + s).length > MAX) {
+      if (buffer) chunks.push(buffer);
+      buffer = s + " ";
+    } else {
+      buffer += s + " ";
+    }
+  }
+  if (buffer) chunks.push(buffer);
+
+  let chunkIndex = 0;
+  let globalOffset = offset;   // 🔥 CRITICAL
+
+  narratorActive = true;
+  lastContainer = container;
+  lastOffset = offset;
+
+  function speakChunk() {
+
+    if (chunkIndex >= chunks.length) {
+      narratorActive = false;
+      lastOffset = 0;
+      lastCharIndex = 0;
+      return;
+    }
+
+    const chunkText = chunks[chunkIndex];
+
+    utterance = new SpeechSynthesisUtterance(chunkText);
     utterance.voice = teacherVoice;
 
-    utterance.onboundary = e => {
+    utterance.onboundary = (e) => {
       if (e.name === "word") {
-        lastCharIndex = offset + e.charIndex;
+        // 🔥 maintain continuous index for your highlighter system
+        lastCharIndex = globalOffset + e.charIndex;
       }
     };
 
     utterance.onend = () => {
-      narratorActive = false;
-      lastOffset = 0;
-      lastCharIndex = 0;
+      // 🔥 advance global offset correctly
+      globalOffset += chunkText.length;
+      chunkIndex++;
+      speakChunk();
     };
-
-    narratorActive = true;
-    lastContainer = container;
-    lastOffset = offset;
 
     synth.speak(utterance);
   }
 
+  speakChunk();
+}
 
   /* =========================================================
      START BUTTON
@@ -6532,74 +6674,46 @@ function findParagraphIndex(globalCharIndex) {
     return { root, offset, container };
   }
 
-  /* ==========================================
-     Hook safely into speech
-  ========================================== */
-  const originalSpeak = synth.speak.bind(synth);
+/* ========================================== 
+   Hook safely into speech (NO AUTO-HIGHLIGHT)
+========================================== */
+const originalSpeak = synth.speak.bind(synth);
 
-  synth.speak = function(utterance) {
+synth.speak = function(utterance) {
 
-    const cursorInfo = getCursorInfo();
-    if (!cursorInfo) return originalSpeak(utterance);
+  const cursorInfo = getCursorInfo();
+  if (!cursorInfo) return originalSpeak(utterance);
 
-    const { root, offset, container } = cursorInfo;
+  const { offset, container } = cursorInfo;
 
-    collectParagraphsFrom(root);
+  // Detect if cursor moved
+  const cursorMoved =
+    container !== lastStartContainer ||
+    offset !== lastStartOffset;
 
-    // Detect if cursor moved
-    const cursorMoved =
-      container !== lastStartContainer ||
-      offset !== lastStartOffset;
+  if (cursorMoved) {
+    baseOffset = offset;
+    lastSpokenGlobal = offset;
+  }
 
-    if (cursorMoved) {
-      baseOffset = offset;
-      lastSpokenGlobal = offset;
+  lastStartContainer = container;
+  lastStartOffset = offset;
+
+  // Optional: still track position silently (no UI effects)
+  utterance.addEventListener("boundary", function(e){
+    if (e.name !== "word") return;
+    lastSpokenGlobal = baseOffset + e.charIndex;
+  });
+
+  utterance.addEventListener("end", function(){
+    if (!synth.speaking) {
+      lastSpokenGlobal = 0;
+      baseOffset = 0;
     }
+  });
 
-    lastStartContainer = container;
-    lastStartOffset = offset;
-
-    currentIndex = -1;
-    clearAll();
-
-    utterance.addEventListener("boundary", function(e){
-
-      if (e.name !== "word") return;
-
-      const globalIndex = baseOffset + e.charIndex;
-      lastSpokenGlobal = globalIndex;
-
-      const index = findParagraphIndex(globalIndex);
-      if (index === -1) return;
-
-      if (index !== currentIndex) {
-
-        if (currentIndex !== -1) {
-          fadeParagraph(currentIndex);
-        }
-
-        currentIndex = index;
-        highlightParagraph(currentIndex);
-      }
-    });
-
-    utterance.addEventListener("end", function(){
-
-      // If speech naturally completed, reset resume point
-      if (!synth.speaking) {
-        lastSpokenGlobal = 0;
-        baseOffset = 0;
-      }
-
-      clearAll();
-      currentIndex = -1;
-    });
-
-    originalSpeak(utterance);
-  };
-
-})();
-</script>
+  return originalSpeak(utterance);
+};</script>
 
 <!-- ====== 5. Emoji + Audio Feedback ====== -->
 <script>
@@ -6702,73 +6816,57 @@ exercise.dataset.percentage = percentage;
 
 
   // ======================
-// SUBMIT BUTTON (DISPLAY + SUPABASE)
-// ======================
-document.body.addEventListener('click', e => {
-  if (!e.target.classList.contains('quiz-submit')) return;
+  // SUBMIT BUTTON (DISPLAY SCOREBOARD ONLY)
+  // ======================
+  document.body.addEventListener('click', e => {
+    if (!e.target.classList.contains('quiz-submit')) return;
+    const sub = e.target.closest('.quiz-subsection');
+    if (!sub) return;
 
-  const sub = e.target.closest('.quiz-subsection');
-  if (!sub) return;
+    const exercises = sub.querySelectorAll('.exercise');
 
-  const exercises = sub.querySelectorAll('.exercise');
+    // Aggregate first-click scores
+    let correctCount = 0;
+    exercises.forEach(ex => {
+      const sc = Number(ex.dataset.score || 0);
+      correctCount += sc;
+    });
 
-  // Aggregate first-click scores
-  let correctCount = 0;
-  exercises.forEach(ex => {
-    const sc = Number(ex.dataset.score || 0);
-    correctCount += sc;
+    const totalExercises = exercises.length;
+    const percentage = totalExercises > 0 ? Math.round((correctCount / totalExercises) * 100) : 0;
+
+    // Display in scoreboard
+    const board = sub.querySelector('.quiz-scoreboard');
+    if (board) {
+      const dataEl = board.querySelector('.scoreboard-data');
+      const name = sub.querySelector('.quiz-name')?.value || 'Anonymous';
+      const id   = sub.querySelector('.quiz-id')?.value || 'N/A';
+      const section = sub.closest('.section')?.querySelector('h2')?.textContent || 'Unknown Section';
+      const subsection = sub.dataset.subsection || 'Unknown Subsection';
+      const now = new Date();
+      const pad = n => n.toString().padStart(2,'0');
+      const dateString = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const filename = window.location.pathname.split('/').pop();
+
+const resultText = `${filename}|${section.replace(/:+$/, '').trim()}: ${subsection.replace(/^:+/, '').trim()}|${name}|${id}|${dateString}|${correctCount}/${totalExercises}|${percentage}%`;
+      if (dataEl) dataEl.textContent = resultText;
+
+if (window.saveResult) {
+  const finalResultText = board.querySelector('.scoreboard-data')?.textContent;
+if (finalResultText && window.saveResult) {
+  window.saveResult(finalResultText);
+}
+}
+
+      board.style.display = 'block';
+    }
   });
 
-  const totalExercises = exercises.length;
-  const percentage = totalExercises > 0
-    ? Math.round((correctCount / totalExercises) * 100)
-    : 0;
-
-  const board = sub.querySelector('.quiz-scoreboard');
-  if (!board) return;
-
-  const dataEl = board.querySelector('.scoreboard-data');
-
-  const name = sub.querySelector('.quiz-name')?.value || 'Anonymous';
-  const id   = sub.querySelector('.quiz-id')?.value || 'N/A';
-  const section = sub.closest('.section')?.querySelector('h2')?.textContent || 'Unknown Section';
-  const subsection = sub.dataset.subsection || 'Unknown Subsection';
-
-  const now = new Date();
-  const pad = n => n.toString().padStart(2,'0');
-
-  const dateString =
-    `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ` +
-    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-
-  const filename = window.location.pathname.split('/').pop();
-
-  const resultText =
-    `${filename}|` +
-    `${section.replace(/:+$/, '').trim()}: ${subsection.replace(/^:+/, '').trim()}|` +
-    `${name}|${id}|${dateString}|` +
-    `${correctCount}/${totalExercises}|${percentage}%`;
-
-  // show on UI
-  if (dataEl) dataEl.textContent = resultText;
-  board.style.display = 'block';
-
-  // ✅ SEND TO SUPABASE (ONLY ONCE)
-try {
-  if (typeof window.saveResult === "function") {
-    console.log("📡 Calling saveResult...");
-    window.saveResult(resultText);
-  } else {
-    console.error("❌ saveResult is not a function or not loaded", window.saveResult);
-  }
-} catch (err) {
-  console.error("❌ saveResult crashed before call:", err);
-}
-});
+})();
 </script>
 
 
-<script>
+<!--<script>
 (function () {
 
   if (document.getElementById("global-green-border")) return;
@@ -6785,6 +6883,49 @@ try {
   });
 
   document.documentElement.appendChild(border);
+
+})();
+</script>-->
+
+<script>
+(function () {
+
+  if (document.getElementById("global-green-border")) return;
+
+  const border = document.createElement("div");
+  border.id = "global-green-border";
+
+  Object.assign(border.style, {
+    position: "fixed",
+    inset: "0",
+    pointerEvents: "none",
+    zIndex: "2147483647",
+    boxShadow: "inset 0 0 0 10px #39FF14",
+    willChange: "transform",
+    transition: "transform 0.12s ease-out"
+  });
+
+  document.documentElement.appendChild(border);
+
+  function adjustForKeyboard() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const keyboardOffset =
+      window.innerHeight - vv.height - vv.offsetTop;
+
+    border.style.transform =
+      `translateY(-${Math.max(0, keyboardOffset)}px)`;
+  }
+
+  const vv = window.visualViewport;
+
+  if (vv) {
+    vv.addEventListener("resize", adjustForKeyboard);
+    vv.addEventListener("scroll", adjustForKeyboard);
+  }
+
+  adjustForKeyboard();
 
 })();
 </script>
@@ -6863,161 +7004,6 @@ try {
 
 })(); // <- this closes the IIFE
 </script>
-
-
-<script>
-  window.OVERLAY_ENABLED = false;
-
-  (function(){
-    if (window.OVERLAY_ENABLED === false) return; // <<< stops the overlay from running
-
-    /* =========================================
-       1. RAW TEXT BLOCK — organized by team
-       ========================================= */
-
-    const rawText = (function(){/*
-    ~Team A List~
-    |Team A|11Phapmuan|12Piyanun|
-
-
-    ~Team B List~
-    |Team B|11KornKamol|12Achiravit|
-
-    */}).toString()
-    .replace(/^[^\/]+\/\*!?/, '')
-    .replace(/\*\/[^\/]+$/, '')
-    .trim();
-
-
-    /* =========================================
-       2. Parse teams
-       ========================================= */
-
-    const teamA = [];
-    const teamB = [];
-    let currentTeam = null;
-
-    rawText.split(/\r?\n/).forEach(line => {
-      line = line.trim();
-      if (!line) return;
-
-      if (/~Team A List~/i.test(line)) currentTeam = "A";
-      else if (/~Team B List~/i.test(line)) currentTeam = "B";
-      else if (currentTeam === "A") teamA.push(line.replace(/\//g,"•"));
-      else if (currentTeam === "B") teamB.push(line.replace(/\//g,"•"));
-    });
-
-    const allLines = teamA.concat(teamB);
-
-
-    /* =========================================
-       3. OVERLAY EXCLUSION CONFIG
-       ========================================= */
-
-    const RAW_EXCLUDED_DIVS = `
-    <div id="dynamicInputsReadingSpeaking">
-    <div id="instructionsContainerReadingSpeaking">
-    <div id="dynamicInputsWritingSpeaking">
-    <div id="instructionsContainerWritingSpeaking">
-    <div id="outputContainerReadingSpeaking">
-    <div id="outputContainerWritingSpeaking">
-    `;
-
-    const OVERLAY_EXCLUSIONS = [
-      ...RAW_EXCLUDED_DIVS.matchAll(/id="([^"]+)"/g)
-    ].map(m => `#${m[1]}`);
-
-
-    /* =========================================
-       4. Overlay engine
-       ========================================= */
-
-    const numberPattern = /^(?:Question\s*)?\d+[\.\)\:\-]/i;
-
-    function isExcluded(el) {
-      if (OVERLAY_EXCLUSIONS.some(sel => el.closest(sel))) return true;
-      if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return true;
-      return false;
-    }
-
-function createOverlay(questionEl, line) {
-  if (questionEl.dataset.overlayApplied) return;
-
-  const overlayDiv = document.createElement("div");
-  overlayDiv.textContent = line;
-  overlayDiv.style.fontSize = "10px";
-  overlayDiv.style.lineHeight = "10px";
-  overlayDiv.style.color = "#1976d2";
-  overlayDiv.style.fontWeight = "bold";
-  overlayDiv.style.pointerEvents = "none";
-  overlayDiv.style.marginBottom = "2px";
-  overlayDiv.style.textAlign = "left";
-  overlayDiv.style.display = "block";
-
-  // small nudge upwards to center in space above question
-  overlayDiv.style.marginTop = "-5px";
-
-  questionEl.parentNode.insertBefore(overlayDiv, questionEl);
-  questionEl.dataset.overlayApplied = "1";
-}
-
-
-    function scanAndAssignOverlays() {
-      const numberEls = [];
-
-      document.querySelectorAll("body *").forEach(el => {
-        if (isExcluded(el)) return;
-        if (el.childElementCount !== 0) return;
-
-        const text = el.textContent.trim();
-        if (!numberPattern.test(text)) return;
-
-        numberEls.push(el);
-      });
-
-      numberEls.forEach((el, index) => {
-        const line =
-          (teamA.length && teamB.length)
-            ? (index % 2 === 0
-                ? teamA[Math.floor(Math.random() * teamA.length)]
-                : teamB[Math.floor(Math.random() * teamB.length)])
-            : allLines[Math.floor(Math.random() * allLines.length)];
-
-        createOverlay(el, line);
-      });
-    }
-
-
-
-    scanAndAssignOverlays();
-    setInterval(scanAndAssignOverlays, 700);
-
-  })();
-</script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -7136,11 +7122,31 @@ function createOverlay(questionEl, line) {
       "for","so","yet","at","by","in","of","on","to","up","as","off","out"
     ];
 
-    return rawTitle.split(/\s+/).map((word,i)=>{
+    // ✅ Acronyms to preserve in uppercase
+    const acronyms = ["ot", "nt"];
+
+    return rawTitle.split(/\s+/).map((word, i) => {
+
       const lower = word.toLowerCase();
-      if(i===0) return lower.charAt(0).toUpperCase()+lower.slice(1);
-      if(minorWords.includes(lower)) return lower;
-      return lower.charAt(0).toUpperCase()+lower.slice(1);
+
+      // preserve acronyms like OT / NT
+      if (acronyms.includes(lower)) {
+        return lower.toUpperCase();
+      }
+
+      // first word always capitalized
+      if (i === 0) {
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      }
+
+      // minor words stay lowercase
+      if (minorWords.includes(lower)) {
+        return lower;
+      }
+
+      // default title case
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+
     }).join(" ");
   }
 
@@ -7156,7 +7162,6 @@ function createOverlay(questionEl, line) {
 
 })();
 
-
 /* ==========================================================
    PAGE INIT
 ========================================================== */
@@ -7164,8 +7169,6 @@ function createOverlay(questionEl, line) {
 document.addEventListener("DOMContentLoaded",function(){
 
   window.applyPageTitle();
-
-  document.documentElement.classList.add("ui-ready");
 
 });
 
@@ -7186,10 +7189,13 @@ document.addEventListener("DOMContentLoaded",function(){
     const hardOn=root.classList.contains("show-hard");
     const dynamicOn=root.classList.contains("show-dynamic");
 
-    if(window.sections.length===1 && !hardOn && !dynamicOn){
-      window.openQuizModal(0);
-    }
+const recentlyClosed =
+  window.__quizJustClosed &&
+  (Date.now() - window.__quizJustClosed < 1500);
 
+if (window.sections.length === 1 && !hardOn && !dynamicOn && !recentlyClosed) {
+  window.openQuizModal(0);
+}
   }
 
   if(document.readyState==="loading"){
@@ -7201,82 +7207,11 @@ document.addEventListener("DOMContentLoaded",function(){
 })();
 
 
-/* ==========================================================
-   MV BUTTON ENGINE (.mvButton)
-========================================================== */
-
-(function(){
-
-  function initMVButtons(){
-
-    if(!window.sections || !Array.isArray(window.sections)) return;
-
-    const mvButtons=document.querySelectorAll(".mvButton");
-
-    mvButtons.forEach(btn=>{
-
-      btn.addEventListener("click",function(e){
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        const internal=this.dataset.internal;
-        if(!internal) return;
-
-        const match=internal.match(/^(\d+)/);
-        if(!match) return;
-
-        const number=match[1];
-
-        const sectionIndex=window.sections.findIndex(sec =>
-          sec.title.startsWith(number+".")
-        );
-
-        if(sectionIndex===-1){
-          console.warn("Section not found for:",internal);
-          return;
-        }
-
-        if(typeof window.openQuizModal==="function"){
-          window.openQuizModal(sectionIndex);
-          moveControlsIntoModal();
-          buildChapterVerseLogic();
-          return;
-        }
-
-        const mvWindow=document.getElementById("mvWindow");
-        const layout=document.getElementById("layout");
-        const dynamicTOC=document.getElementById("dynamicTOC");
-
-        if(layout) layout.style.display="none";
-        if(dynamicTOC) dynamicTOC.style.display="none";
-
-        if(window.speechSynthesis){
-          speechSynthesis.cancel();
-        }
-
-      });
-
-    });
-
-  }
-
-  function waitForSections(){
-    if(window.sections && window.sections.length){
-      initMVButtons();
-    }else{
-      setTimeout(waitForSections,100);
-    }
-  }
-
-  waitForSections();
-
-})();
 
 
 
 /* ==========================================================
-   MODAL CONTROL MOVEMENT + CHAPTER/VERSE SYSTEM
+   MODAL CONTROL MOVEMENT + CHAPTER/VERSE SYSTEM (ROBUST)
 ========================================================== */
 
 function moveControlsIntoModal(){
@@ -7292,15 +7227,15 @@ function moveControlsIntoModal(){
   }
 
   if(readAloud){
-
     readAloud.style.display="block";
 
     if(!modalContent.contains(readAloud)){
-      modalContent.insertBefore(readAloud,chapterControls?.nextSibling || modalContent.firstChild);
+      modalContent.insertBefore(
+        readAloud,
+        chapterControls?.nextSibling || modalContent.firstChild
+      );
     }
-
   }
-
 }
 
 
@@ -7316,39 +7251,59 @@ function buildChapterVerseLogic(){
   const chapterSelect=modal.querySelector("#chapterSelect");
   const verseSelect=modal.querySelector("#verseSelect");
   const goBtn=modal.querySelector("#goBtn");
-  const quizBtn=modal.querySelector("#quizBtn");
 
-  if(!textContainer || !chapterSelect || !verseSelect || !goBtn || !quizBtn) return;
+  if(!textContainer || !chapterSelect || !verseSelect || !goBtn){
+    console.warn("Chapter/Verse system missing required elements");
+    return;
+  }
 
   if(chapterControls){
     chapterControls.style.display="block";
   }
 
   const paragraphs=[...textContainer.querySelectorAll("p")];
-  if(!paragraphs.length) return;
+  if(!paragraphs.length){
+    console.warn("No paragraphs found for chapter/verse mapping");
+    return;
+  }
 
   const structure={};
   let currentChapter=null;
 
+  // ===== helper: normalize text =====
+  const clean = (t)=>t.trim().replace(/\s+/g,' ');
+
   paragraphs.forEach(p=>{
 
-    const text=p.textContent.trim();
+    const text=clean(p.textContent);
 
-    const chapMatch=text.match(/^chapter\s+(\d+)/i);
-    const verseMatch=text.match(/^verse\s+(\d+)/i);
+    // ===== FLEXIBLE CHAPTER MATCHING =====
+    const chapMatch=
+      text.match(/^chapter\s*:?\s*(\d+)/i) ||
+      text.match(/^#?\s*chapter\s*(\d+)/i) ||
+      text.match(/^(\d+)\.\s*chapter/i);
+
+    // ===== FLEXIBLE VERSE MATCHING =====
+    const verseMatch=
+      text.match(/^verse\s*:?\s*(\d+)/i) ||
+      text.match(/^v\s*(\d+)/i);
+
     const fullRefMatch=text.match(/^(\d+):(\d+)\s/);
 
+    // ===== chapter detection =====
     if(chapMatch){
       currentChapter=chapMatch[1];
       if(!structure[currentChapter]) structure[currentChapter]={};
       return;
     }
 
+    // ===== verse detection (context-based) =====
     if(currentChapter && verseMatch){
       structure[currentChapter][verseMatch[1]]=p;
       return;
     }
 
+    // ===== inline chapter:verse detection =====
     if(fullRefMatch){
       const c=fullRefMatch[1];
       const v=fullRefMatch[2];
@@ -7361,6 +7316,12 @@ function buildChapterVerseLogic(){
 
   });
 
+  // ===== DEBUG SAFETY =====
+  if(Object.keys(structure).length===0){
+    console.warn("ChapterVerse structure is EMPTY. Check formatting.");
+  }
+
+  // ===== populate chapters =====
   chapterSelect.innerHTML="";
 
   Object.keys(structure).forEach(ch=>{
@@ -7403,7 +7364,6 @@ function buildChapterVerseLogic(){
       : 0;
 
     return readHeight + chapterHeight + extraPadding;
-
   }
 
   goBtn.onclick=function(){
@@ -7411,7 +7371,10 @@ function buildChapterVerseLogic(){
     const chapter=chapterSelect.value;
     const verse=verseSelect.value;
 
-    if(!structure[chapter] || !structure[chapter][verse]) return;
+    if(!structure[chapter] || !structure[chapter][verse]){
+      console.warn("Verse not found:", chapter, verse);
+      return;
+    }
 
     const target=structure[chapter][verse];
 
@@ -7424,28 +7387,10 @@ function buildChapterVerseLogic(){
       top:target.offsetTop-offset,
       behavior:"smooth"
     });
-
   };
 
-  quizBtn.onclick=function(){
-
-    const firstQuiz=modal.querySelector(".quiz-subsection");
-    if(!firstQuiz) return;
-
-    const offset=getControlsOffset(40);
-
-    modal.scrollTo({
-      top:firstQuiz.offsetTop-offset,
-      behavior:"smooth"
-    });
-
-  };
-
+  window.chapterVerseStructure = structure; // debug access
 }
-
-window.moveControlsIntoModal = moveControlsIntoModal;
-window.buildChapterVerseLogic = buildChapterVerseLogic;
-
 
 /* ==========================================================
    MODAL ARROW SCROLL
@@ -7501,84 +7446,6 @@ window.buildChapterVerseLogic = buildChapterVerseLogic;
   });
 
   observer.observe(modalRoot,{attributes:true,attributeFilter:["class"]});
-
-})();
-
-
-/* ==========================================================
-   NO QUIZ 🚫 FEEDBACK
-========================================================== */
-
-(function(){
-
-  function initNoQuizFeedback(){
-
-    const quizBtn=document.getElementById("quizBtn");
-    const modal=document.getElementById("quizModal");
-    if(!quizBtn || !modal) return;
-
-    quizBtn.addEventListener("click",function(e){
-
-      const firstQuiz=document.querySelector("#quizModal .quiz-subsection");
-
-      if(firstQuiz) return;
-
-      e.stopImmediatePropagation();
-      e.preventDefault();
-
-      if(quizBtn.dataset.noQuizActive) return;
-      quizBtn.dataset.noQuizActive="1";
-
-      const originalBg=window.getComputedStyle(quizBtn).backgroundColor;
-      const originalOpacity=quizBtn.style.opacity;
-
-      quizBtn.style.position="relative";
-      quizBtn.style.transition="background-color .2s ease, opacity .2s ease";
-      quizBtn.style.backgroundColor="transparent";
-      quizBtn.style.opacity="0.6";
-
-      const overlay=document.createElement("span");
-      overlay.textContent="🚫";
-      overlay.style.position="absolute";
-      overlay.style.left="50%";
-      overlay.style.top="50%";
-      overlay.style.transform="translate(-50%,-50%) scale(.5)";
-      overlay.style.fontSize="28px";
-      overlay.style.pointerEvents="none";
-      overlay.style.transition="transform .2s ease, opacity .2s ease";
-      overlay.style.opacity="0";
-
-      quizBtn.appendChild(overlay);
-
-      requestAnimationFrame(()=>{
-        overlay.style.transform="translate(-50%,-50%) scale(1)";
-        overlay.style.opacity="1";
-      });
-
-      setTimeout(()=>{
-
-        overlay.style.opacity="0";
-        overlay.style.transform="translate(-50%,-50%) scale(.5)";
-
-        quizBtn.style.backgroundColor=originalBg;
-        quizBtn.style.opacity=originalOpacity || "1";
-
-        setTimeout(()=>{
-          overlay.remove();
-          delete quizBtn.dataset.noQuizActive;
-        },200);
-
-      },900);
-
-    },true);
-
-  }
-
-  if(document.readyState==="loading"){
-    document.addEventListener("DOMContentLoaded",initNoQuizFeedback);
-  }else{
-    initNoQuizFeedback();
-  }
 
 })();
 
@@ -7658,73 +7525,6 @@ document.addEventListener("click",function(e){
 </script>
 
 <script>
-const HIDE_CHAPTER_BAR = true;
-
-(function(){
-
-function adjustControls(){
-
-  if(!HIDE_CHAPTER_BAR) return;
-
-  const chapterBar =
-    document.getElementById("chapterVerseControls") ||
-    document.getElementById("chapterVerseBar");
-
-  const readBar =
-    document.getElementById("readaloudControls") ||
-    document.getElementById("readAloudControls");
-
-  if(chapterBar){
-    chapterBar.style.display = "none";
-  }
-
-  if(readBar){
-    readBar.style.position = "sticky";
-    readBar.style.top = "0";
-    readBar.style.zIndex = "1000";
-  }
-
-}
-
-/* run immediately */
-adjustControls();
-
-/* run after DOM ready */
-document.addEventListener("DOMContentLoaded", adjustControls);
-
-/* watch for UI rebuilding */
-const observer = new MutationObserver((mutations)=>{
-
-  for(const m of mutations){
-    for(const node of m.addedNodes){
-
-      if(node.nodeType !== 1) continue;
-
-      if(
-        node.id === "chapterVerseControls" ||
-        node.id === "chapterVerseBar" ||
-        node.id === "readaloudControls" ||
-        node.id === "readAloudControls" ||
-        node.querySelector?.("#chapterVerseControls, #chapterVerseBar, #readaloudControls, #readAloudControls")
-      ){
-        adjustControls();
-        return;
-      }
-
-    }
-  }
-
-});
-
-observer.observe(document.body,{
-  childList:true,
-  subtree:true
-});
-
-})();
-</script>
-
-<script>
 document.addEventListener("DOMContentLoaded", () => {
 
   const targets = [
@@ -7738,6 +7538,8 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="footer-note copyright">
         © <span class="auto-year"></span> Perfectly Practical English™. All rights reserved.
       </div>
+<div id="visitor-count">Visits: loading...</div>
+
     </section>
   `;
 
@@ -7760,7 +7562,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentGap = copyTop - lastBottom;
     const adjust = currentGap - desiredGap;
 
-    copyright.style.marginTop = (-adjust) + "px";
+    copyright.style.marginTop = (-adjust - 5) + "px";
   }
 
   function update(){
@@ -7792,272 +7594,142 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <script>
-
 (function(){
 
-/* =========================
-   RAW INSTRUCTIONS TEXT
-========================= */
+  const startBtn = document.getElementById('startBtn');
+  let activeEl = null;
 
-const RAW_TEXT = `
-Open Section Content 
-1. Click blue buttons to open sections.
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
 
----
+  const DRAG_THRESHOLD = 8;
 
-Reader Tools
+  const X_THRESHOLD = 60;
+  const Y_THRESHOLD = 30;
 
-1. Highlight - Select text and click to highlight.
-2. Click again to remove highlight.
-3. Copy - Select text and click to copy.
-4. Read Aloud - Place the cursor where you want to start reading.
-5. Start- Click Start to hear the text. Click Start again to stop.
-6. Click Close to return to the Table of Contents.
+  const synth = window.speechSynthesis;
 
----
+  /* =========================
+     STYLE (soft + fade out)
+  ========================= */
+  if (!document.getElementById("chunkHighlightStyle")) {
+    const style = document.createElement("style");
+    style.id = "chunkHighlightStyle";
+    style.textContent = `
+      .chunk-active {
+        background: #fff9c4;
+        transition: background 0.6s ease;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
-Quiz
+  function fadeHighlight() {
+    if (!activeEl) return;
 
-1. Enter Name and ID.
-2. Select the best answer.😊 = Correct. 😟 = Incorrect. Only the first answer counts.
-3. Click Submit to see your score.
-4. Copy or download your score.
-5. Click Close to return to the Table of Contents.
+    activeEl.style.background = "transparent";
 
-`;
+    setTimeout(() => {
+      if (activeEl) {
+        activeEl.classList.remove("chunk-active");
+        activeEl.style.background = "";
+        activeEl = null;
+      }
+    }, 600);
+  }
 
-
-/* =========================
-   RAW TEXT PARSER
-========================= */
-
-function parseRawInstructions(text){
-
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const html = [];
-
-  lines.forEach(line => {
-
-    if(line === "---"){
-      html.push(`<hr>`);
-      return;
+  function setHighlight(el) {
+    if (activeEl) {
+      activeEl.classList.remove("chunk-active");
     }
+    activeEl = el;
+    el.classList.add("chunk-active");
+  }
 
-    if(/^\d+\./.test(line)){
-      html.push(`<p>${line}</p>`);
-      return;
-    }
+  function placeCursorAtStart(el) {
+    const range = document.createRange();
+    const sel = window.getSelection();
 
-    if(!/[.!?:]$/.test(line)){
-      html.push(`<h3>${line}</h3>`);
-      return;
-    }
+    range.selectNodeContents(el);
+    range.collapse(true);
 
-    html.push(`<p>${line}</p>`);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  /* =========================
+     POINTER TRACKING
+  ========================= */
+  document.addEventListener("pointerdown", (e) => {
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = false;
   });
 
-  return html.join("");
-}
+  document.addEventListener("pointermove", (e) => {
+    if (Math.abs(e.clientX - startX) > DRAG_THRESHOLD ||
+        Math.abs(e.clientY - startY) > DRAG_THRESHOLD) {
+      isDragging = true;
+    }
+  });
 
+  /* =========================
+     TAP → TOGGLE PLAY/STOP
+  ========================= */
+  document.addEventListener("pointerup", function(e){
 
-/* =========================
-   CREATE STYLE
-========================= */
+    if (isDragging) return;
 
-const style = document.createElement("style");
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) return;
 
-style.textContent = `
-#instructionsBtn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  padding:10px 16px;
-  background:#2e8b57;
-  color:#fff;
-  border:none;
-  border-radius:6px;
-  font-weight:600;
-  cursor:pointer;
-  box-shadow:0 4px 8px rgba(0,0,0,0.6);
-  z-index:99998;
-}
+    const p = e.target.closest(".question-text p, #quizSections p");
+    if (!p) return;
 
-#instructionsBtn:hover{
-  background:#257047;
-}
+    if (e.target.closest("button, input, label")) return;
 
-#instructionsRoot{
-  position:fixed;
-  inset:0;
-  display:none;
-  z-index:99999;
-}
+    const rect = p.getBoundingClientRect();
 
-#instructionsBackdrop{
-  position:absolute;
-  inset:0;
-  background:rgba(0,0,0,.35);
-}
+    const isRightZone = e.clientX > rect.right - X_THRESHOLD;
+    const isBottomZone = e.clientY > rect.bottom - Y_THRESHOLD;
 
-#instructionsModal{
-  position:absolute;
-  top:25px;
-  left:50%;
-  transform:translateX(-50%);
-  width:min(650px,90vw);
-  max-height:90vh;
-  background:#fff;
-  border-radius:10px;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
+    if (!(isRightZone && isBottomZone)) return;
 
-#instructionsHeader{
-  padding:12px 16px;
-  border-bottom:1px solid #ddd;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
+    // =========================
+    // 🔥 TOGGLE LOGIC
+    // =========================
 
-#instructionsTitle{
-  color:#1976d2;
-  font-weight:600;
-  font-size:1.1em;
-}
+    if (synth.speaking) {
+      // STOP
+      synth.cancel();
+      fadeHighlight();
+      return;
+    }
 
-#instructionsBack{
-  border:none;
-  background:none;
-  font-size:20px;
-  cursor:pointer;
-  color:#1976d2;
-  font-weight:600;
-}
+    // START (fresh)
+    setHighlight(p);
+    placeCursorAtStart(p);
 
-#instructionsContent{
-  padding:2px 18px 18px 18px;
-  overflow-y:auto;
-  line-height:1.6;
-  scrollbar-width:none;
-  -ms-overflow-style:none;
-}
+    setTimeout(() => {
+      if (startBtn) startBtn.click();
+    }, 40);
 
-#instructionsContent::-webkit-scrollbar{
-  display:none;
-}
+  });
 
-#instructionsContent h3{
-  color:#1976d2;
-  margin:12px 0 4px 0;
-  font-weight:600;
-}
+  /* =========================
+     AUTO FADE WHEN SPEECH ENDS
+  ========================= */
+  const originalSpeak = synth.speak.bind(synth);
 
-#instructionsContent p{
-  margin:4px 0;
-}
+  synth.speak = function(utterance) {
 
-#instructionsContent hr{
-  margin:12px 0;
-}
-`;
+    utterance.addEventListener("end", () => {
+      fadeHighlight();
+    });
 
-document.head.appendChild(style);
-
-
-/* =========================
-   CREATE BUTTON
-========================= */
-
-const btn = document.createElement("button");
-btn.id = "instructionsBtn";
-btn.textContent = "Instructions";
-
-document.body.appendChild(btn);
-
-
-/* =========================
-   CREATE MODAL
-========================= */
-
-const root = document.createElement("div");
-root.id = "instructionsRoot";
-
-root.innerHTML = `
-<div id="instructionsBackdrop"></div>
-
-<div id="instructionsModal">
-
-  <div id="instructionsHeader">
-    <button id="instructionsBack">←</button>
-    <span id="instructionsTitle">Instructions</span>
-  </div>
-
-  <div id="instructionsContent">
-    ${parseRawInstructions(RAW_TEXT)}
-  </div>
-
-</div>
-`;
-
-document.body.appendChild(root);
-
-
-/* =========================
-   SCROLL LOCK
-========================= */
-
-const modalContent = document.getElementById("instructionsContent");
-
-modalContent.addEventListener("wheel", e=>{
-  e.stopPropagation();
-},{passive:false});
-
-modalContent.addEventListener("touchmove", e=>{
-  e.stopPropagation();
-},{passive:false});
-
-
-/* =========================
-   OPEN / CLOSE
-========================= */
-
-function openModal(){
-  root.style.display="block";
-  document.body.style.overflow="hidden";
-  document.documentElement.style.overflow="hidden";
-}
-
-function closeModal(){
-  root.style.display="none";
-  document.body.style.overflow="";
-  document.documentElement.style.overflow="";
-}
-
-btn.onclick = openModal;
-
-document.getElementById("instructionsBack").onclick = closeModal;
-document.getElementById("instructionsBackdrop").onclick = closeModal;
-
-document.addEventListener("keydown", e=>{
-  if(e.key==="Escape") closeModal();
-});
-
-/* =========================
-   DYNAMIC BODY PADDING FOR BUTTON
-========================= */
-
-function adjustBodyPadding(){
-  const btnHeight = btn.offsetHeight + -25; // include some gap
-  document.body.style.paddingBottom = `${btnHeight}px`;
-}
-
-// Initial adjustment
-adjustBodyPadding();
-
-// Update if window is resized (responsive)
-window.addEventListener("resize", adjustBodyPadding);
+    return originalSpeak(utterance);
+  };
 
 })();
 </script>
@@ -8090,71 +7762,759 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
+<script>
+(function () {
+
+  const synth = window.speechSynthesis;
+  const startBtn = document.getElementById("startBtn");
+  if (!startBtn) return;
+
+  // -------------------------
+  // CREATE BOTTOM BUTTON
+  // -------------------------
+  const proxyBtn = document.createElement("button");
+  document.body.appendChild(proxyBtn);
+
+  // -------------------------
+  // DETECT VISIBILITY
+  // -------------------------
+  function isVisible(el) {
+    if (!el) return false;
+
+    const rect = el.getBoundingClientRect();
+
+    return (
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.top < window.innerHeight &&
+      rect.bottom > 0
+    );
+  }
+
+  // -------------------------
+  // SYNC LABEL
+  // -------------------------
+  function syncLabel() {
+    const topLabel = startBtn.textContent?.trim() || "Start";
+    proxyBtn.textContent = topLabel;
+  }
+
+  // -------------------------
+  // 🔥 KEYBOARD-AWARE POSITIONING
+  // -------------------------
+  function adjustForKeyboard() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const keyboardOffset =
+      window.innerHeight - vv.height - vv.offsetTop;
+
+    proxyBtn.style.transform =
+      `translateY(-${Math.max(0, keyboardOffset)}px)`;
+  }
+
+  // -------------------------
+  // 🔥 SYNC STYLES
+  // -------------------------
+  function syncStyles() {
+    const cs = window.getComputedStyle(startBtn);
+
+    Object.assign(proxyBtn.style, {
+      position: "fixed",
+      bottom: "20px",
+      left: "20px",
+      zIndex: 999999,
+      padding: "10px 14px",
+      borderRadius: "6px",
+      border: cs.border,
+      background: cs.backgroundColor,
+      color: cs.color,
+      fontSize: cs.fontSize,
+      fontFamily: cs.fontFamily,
+      fontWeight: cs.fontWeight,
+      cursor: "pointer",
+      boxShadow: "0 4px 8px rgba(0,0,0,0.5)",
+      userSelect: "none",
+
+      // 🔥 important for smooth movement
+      willChange: "transform",
+      transition: "transform 0.12s ease-out"
+    });
+  }
+
+  // -------------------------
+  // MAIN CLICK
+  // -------------------------
+  proxyBtn.addEventListener("click", () => {
+    startBtn.click();
+  });
+
+  // -------------------------
+  // KEEP IN SYNC
+  // -------------------------
+  const observer = new MutationObserver(() => {
+    syncLabel();
+    syncStyles();
+  });
+
+  observer.observe(startBtn, {
+    subtree: true,
+    childList: true,
+    characterData: true
+  });
+
+  setInterval(() => {
+    syncLabel();
+    syncStyles();
+  }, 300);
+
+  // -------------------------
+  // 🔥 KEYBOARD EVENTS
+  // -------------------------
+  const vv = window.visualViewport;
+
+  if (vv) {
+    vv.addEventListener("resize", adjustForKeyboard);
+    vv.addEventListener("scroll", adjustForKeyboard);
+  }
+
+  // -------------------------
+  // INIT
+  // -------------------------
+  syncLabel();
+  syncStyles();
+  adjustForKeyboard();
+
+})();
+</script>
+
+
+<script>
+(function(){
+
+const RAW_TEXT = `
+Open Section Content 
+1. Click blue buttons to open sections.
+
+---
+
+Reader Tools
+
+1. Highlight - Select text and click to highlight.
+2. Click again to remove highlight.
+3. Copy - Select text and click to copy.
+4. Click Close to exit.
+
+---
+
+Quiz
+
+1. Enter Name and ID.
+2. Select best answer.
+3. Click Submit to see score.
+4. Click Close to exit.
+`;
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const btn = document.getElementById("instructionsBtn");
+  if (!btn) return;
+
+  // create isolated modal ONCE
+  let modal = document.getElementById("info-instructions-modal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "info-instructions-modal";
+
+    Object.assign(modal.style, {
+      position: "fixed",
+      inset: "0",
+      background: "rgba(0,0,0,0.6)",
+      display: "none",
+      zIndex: "999999",
+      padding: "40px",
+      boxSizing: "border-box"
+    });
+
+modal.innerHTML = `
+  <div style="
+    max-width:700px;
+    margin:0 auto;
+    background:#fff;
+    padding:20px;
+    border-radius:10px;
+    position:relative;
+    max-height:80vh;
+    overflow:auto;
+    font-family:inherit;
+    box-sizing:border-box;
+  ">
+
+<button id="close-instructions-modal" class="modal-close-btn">✕</button>
+
+    <pre style="
+      white-space:pre-wrap;
+      margin:0;
+      padding-top:10px;
+      overflow-wrap:break-word;
+      word-break:break-word;
+    ">${RAW_TEXT}</pre>
+
+  </div>
+`;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector("#close-instructions-modal").onclick = () => {
+      modal.style.display = "none";
+    };
+  }
+
+  btn.addEventListener("click", () => {
+    modal.style.display = "block";
+  });
+
+});
+
+})();
+</script>
+
+<script>
+(function(){
+
+const RAW_TEXT = `
+Comprehensive reading strategy checklist
+
+1. Cut texts into small pieces.
+2. Collect context clues.
+3. Reread when lost.
+4. Scan titles and images.
+5. Identify known/unknown words.
+6. Use background knowledge.
+7. Break down word parts.
+8. Look up vocabulary.
+9. Identify signal words.
+`;
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const btn = document.getElementById("strategiesBtn");
+  if (!btn) return;
+
+  let modal = document.getElementById("info-strategies-modal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "info-strategies-modal";
+
+    Object.assign(modal.style, {
+      position: "fixed",
+      inset: "0",
+      background: "rgba(0,0,0,0.6)",
+      display: "none",
+      zIndex: "999999",
+      padding: "40px",
+      boxSizing: "border-box"
+    });
+
+    modal.innerHTML = `
+      <div style="
+        max-width:700px;
+        margin:0 auto;
+        background:#fff;
+        padding:20px;
+        border-radius:10px;
+        position:relative;
+        max-height:80vh;
+        overflow:auto;
+        font-family:inherit;
+      ">
+
+<button id="close-strategies-modal" class="modal-close-btn">✕</button>
+
+        <pre style="white-space:pre-wrap;margin:0;">${RAW_TEXT}</pre>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector("#close-strategies-modal").onclick = () => {
+      modal.style.display = "none";
+    };
+  }
+
+  btn.addEventListener("click", () => {
+    modal.style.display = "block";
+  });
+
+});
+
+})();
+</script>
+
+<script>
+(function(){
+
+const RAW_TEXT = `
+Common Signal Word Categories and Examples
+
+• Time ⏰: words that tell when something happens
+
+on, at, in, before, after, since, until, during, for, now, yesterday, today, tomorrow, later, then, when, while, once
+
+• Addition ➕: words that add ideas together
+
+and, also, too, with, plus, as well as, not only...but also, both...and
+
+• Cause / Effect 🔗: words that show a reason or result
+
+because, so, since, because of, due to, as a result, therefore, that’s why
+
+• Comparison / Similarity / Difference ⚖️: words that compare things
+
+like, as, as...as, than, similar to, different from, more than, less than, the most, just as...so, whereas, in contrast to
+
+• Contrast / Opposition 🎭: words that show differences
+
+but, although, though, even though, however, yet, still, despite, instead, whereas, while, on the other hand
+
+• Frequency 〰️: words that tell how often something happens
+
+always, usually, often, sometimes, occasionally, rarely, never, every day, once a week, hardly ever, from time to time
+
+• Possibility / Certainty 🎲: words that show how possible or sure something is
+
+maybe, probably, possibly, must, might, may, could, can, definitely, certainly
+
+• Advice / Obligation / Permission ☝️: words that tell rules or give guidance
+
+must, must not, have to, don’t have to, should, ought to, had better, can, cannot, may, could
+
+• Manner 🎭: words that tell how something is done
+
+quickly, slowly, carefully, easily, well, badly, with, by, in a...way, as
+
+• Place / Location 📍: words that tell where something is
+
+in, on, at, under, above, between, near, next to, here, there, everywhere, anywhere
+
+• Condition 🌧️: words that show something depends on something else
+
+if, unless, in case, on condition that
+
+• Emphasis / Focus 🎯: words that make something stronger or more important
+
+only, just, even, especially, mainly, particularly
+
+• Questions (Interrogatives) ❓: words used to ask questions
+
+how, when, where, why
+
+• Relative Words 👨‍👩‍👧‍👦: words that connect ideas about time, place, reason, or manner
+
+when, where, why, how
+
+• Direction / Movement 🧭: words that show movement or direction
+
+to, from, toward, away from, up, down, forward, back
+
+• Affirmative and Negative ✔️❌: words that show yes or no
+
+yes, no
+`;
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const btn = document.getElementById("signalwordsBtn");
+  if (!btn) return;
+
+  let modal = document.getElementById("info-signalwords-modal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "info-signalwords-modal";
+
+    Object.assign(modal.style, {
+      position: "fixed",
+      inset: "0",
+      background: "rgba(0,0,0,0.6)",
+      display: "none",
+      zIndex: "999999",
+      padding: "40px",
+      boxSizing: "border-box"
+    });
+
+    modal.innerHTML = `
+      <div style="
+        max-width:700px;
+        margin:0 auto;
+        background:#fff;
+        padding:20px;
+        border-radius:10px;
+        position:relative;
+        max-height:80vh;
+        overflow:auto;
+        font-family:inherit;
+      ">
+
+<button id="close-signalwords-modal" class="modal-close-btn">✕</button>
+
+        <pre style="white-space:pre-wrap;margin:0;">${RAW_TEXT}</pre>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector("#close-signalwords-modal").onclick = () => {
+      modal.style.display = "none";
+    };
+  }
+
+  btn.addEventListener("click", () => {
+    modal.style.display = "block";
+  });
+
+});
+
+})();
+</script>
+
+
+
+<script>
+(function() {
+  // Prevent pinch-to-zoom
+  function preventPinch(e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }
+
+  // Prevent double-tap zoom
+  let lastTouchTime = 0;
+  function preventDoubleTap(e) {
+    const now = Date.now();
+    if (now - lastTouchTime < 300) {
+      e.preventDefault();
+    }
+    lastTouchTime = now;
+  }
+
+  // Block gesture events on iOS
+  function preventGesture(e) {
+    e.preventDefault();
+  }
+
+  document.addEventListener('touchstart', preventPinch, { passive: false });
+  document.addEventListener('touchend', preventDoubleTap, { passive: false });
+  document.addEventListener('gesturestart', preventGesture, { passive: false });
+})();
+</script>
+
+<script>
+
+function goToNextQuiz(){
+
+  const modal = document.getElementById("quizModal");
+  const container = modal?.querySelector("#quizSections");
+
+  // ✔️ TARGET THE ACTUAL BUTTON (NOT THE FUNCTION)
+  const goBtn = document.querySelector('button[onclick="goToNextQuiz()"]');
+
+  if(!container) return;
+
+  const originalLabel = goBtn?.textContent || "Go to Quiz";
+
+  function showNoQuizEmoji(){
+
+    if(!goBtn) return;
+
+    goBtn.textContent = "🚫";
+
+    setTimeout(() => {
+      goBtn.textContent = originalLabel;
+    }, 900);
+
+  }
+
+  const firstQuiz = container.querySelector(".quiz-subsection");
+
+  // ===== NO QUIZ FOUND =====
+  if(!firstQuiz){
+    showNoQuizEmoji();
+    return;
+  }
+
+  const readAloud = modal?.querySelector("#readaloudControls");
+  const chapterControls = modal?.querySelector("#chapterVerseControls");
+
+  const offset =
+    (readAloud?.offsetHeight || 0) +
+    (chapterControls?.offsetHeight || 0) +
+    20;
+
+  modal.scrollTo({
+    top: firstQuiz.offsetTop - offset,
+    behavior: "smooth"
+  });
+
+}
+
+</script>
+
+<script>
+// ===== UNIVERSAL CLOSE HANDLER (safe + no blank bug) =====
+document.addEventListener("click", (e) => {
+
+  const closeBtn = e.target.closest(
+    ".quiz-close, .modal-close, #closeModalBtn"
+  );
+
+  if (!closeBtn) return;
+
+  e.preventDefault();
+
+  // Smooth fade instead of hard visibility kill
+  document.body.style.opacity = "0";
+
+  // Close modal immediately
+  const modalRoot = document.getElementById("modalRoot");
+  if (modalRoot) modalRoot.classList.remove("active");
+
+  document.body.classList.remove("modal-open");
+
+  // Force full reload
+  setTimeout(() => {
+    location.replace(window.location.pathname);
+  }, 80);
+
+});
+</script>
+
+
+<script>
+(function () {
+
+  function showPage() {
+    const root = document.documentElement;
+    const loader = document.getElementById("loader");
+
+    // Remove old gating (safe even if unused)
+    root.classList.remove("pre-auto-open", "show-hard", "show-dynamic");
+
+    // ✅ Reveal UI (controls title via CSS)
+    root.classList.add("ui-ready");
+
+    // Force key containers visible
+    const layout = document.getElementById("layout");
+    const toc = document.getElementById("dynamicTOC");
+
+    if (layout) layout.style.display = "block";
+    if (toc) toc.style.display = "block";
+
+    // Fallback: reveal hidden content if needed
+    if (!layout && !toc) {
+      document.body.style.visibility = "visible";
+      document.querySelectorAll(".visually-hidden").forEach(el => {
+        el.style.position = "static";
+        el.style.left = "0";
+      });
+    }
+
+    // Kill loader LAST
+    if (loader) loader.remove();
+  }
+
+  // Run immediately (prevents stuck loader)
+  showPage();
+
+  // Backup safety
+  document.addEventListener("DOMContentLoaded", showPage);
+  window.addEventListener("load", showPage);
+  setTimeout(showPage, 1500);
+
+})();
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const targets = [
+    { parent:"#layout", content:"#layout", gap:-30 },
+    { parent:"#tocContainer", content:"#tocContainer", gap:-20 },
+    { parent:"#quizModal", content:"#quizModalContent", gap:-30 }
+  ];
+
+  const copyrightHTML = `
+    <section class="copyrightSection">
+
+      <!-- 10px invisible space ABOVE copyright -->
+      <div class="spacer spacer-top"></div>
+
+      <div class="footer-note copyright">
+        © <span class="auto-year"></span> Perfectly Practical English™. All rights reserved.
+      </div>
+
+      <div id="visitor-count" class="visitor-count">
+        Visits: loading...
+      </div>
+
+      <!-- 30px invisible space BELOW visits -->
+      <div class="spacer spacer-bottom"></div>
+
+
+    </section>
+  `;
+
+  function insertCopyright(parent){
+    if (!parent.querySelector(":scope > .copyrightSection")) {
+      parent.insertAdjacentHTML("beforeend", copyrightHTML);
+    }
+  }
+
+  function adjust(parent, content, desiredGap){
+
+    const copyright = parent.querySelector(".copyrightSection");
+    const last = content.lastElementChild;
+
+    if (!copyright || !last) return;
+
+    const lastBottom = last.getBoundingClientRect().bottom;
+    const copyTop = copyright.getBoundingClientRect().top;
+
+    const currentGap = copyTop - lastBottom;
+    const adjust = currentGap - desiredGap;
+
+    const extraOffset = 5; // try 5–10px
+
+copyright.style.marginTop = (-adjust + extraOffset) + "px";
+  }
+
+  async function updateVisitorCount() {
+
+    const namespace = "PerfectlyPracticalEnglish";
+    const key = "homepage";
+
+    const isOwner =
+      localStorage.getItem("isOwner") === "true";
+
+    const isLocal =
+      location.hostname === "localhost" ||
+      location.hostname === "127.0.0.1";
+
+    const alreadyCounted =
+      sessionStorage.getItem("counted");
+
+    let data;
+
+    try {
+
+      if (!isOwner && !isLocal && !alreadyCounted) {
+
+        data = await fetch(
+          `https://api.countapi.xyz/hit/${namespace}/${key}`
+        ).then(r => r.json());
+
+        sessionStorage.setItem("counted", "true");
+
+      } else {
+
+        data = await fetch(
+          `https://api.countapi.xyz/get/${namespace}/${key}`
+        ).then(r => r.json());
+
+      }
+
+      document.querySelectorAll("#visitor-count").forEach(el => {
+        el.textContent = `Total: ${data.value} visits`;
+      });
+
+    } catch (err) {
+
+      console.error("Visitor counter failed:", err);
+
+      document.querySelectorAll("#visitor-count").forEach(el => {
+        el.textContent = "Visits unavailable";
+      });
+
+    }
+
+  }
+
+  function update(){
+
+    targets.forEach(t => {
+
+      const parent = document.querySelector(t.parent);
+      const content = document.querySelector(t.content);
+
+      if (!parent || !content) return;
+
+      insertCopyright(parent);
+      adjust(parent, content, t.gap);
+
+    });
+
+  }
+
+  // Set current year
+  document.querySelectorAll(".auto-year").forEach(el => {
+    el.textContent = new Date().getFullYear();
+  });
+
+  update();
+  updateVisitorCount();
+
+  window.addEventListener("resize", update);
+
+});
+</script>
+
+<script>
+function fixModalScrollRoom() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+
+  const keyboardHeight =
+    window.innerHeight - vv.height - vv.offsetTop;
+
+  const modal = document.getElementById("quizModal");
+  if (!modal) return;
+
+  modal.style.height =
+    `calc(100dvh - ${keyboardHeight}px)`;
+}
+
+window.visualViewport?.addEventListener("resize", fixModalScrollRoom);
+window.visualViewport?.addEventListener("scroll", fixModalScrollRoom);
+window.addEventListener("resize", fixModalScrollRoom);
+
+fixModalScrollRoom();
+
+</script>
+
 <!-- SUPABASE LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
 
-let supabaseClient = null;
-let supabaseReady = false;
+const supabaseClient = window.supabase?.createClient(
+  'https://etwwriloppklhhkmswpr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
+);
 
-function initSupabase() {
-  if (!window.supabase) {
-    console.error("❌ Supabase library not loaded yet");
-    return null;
-  }
-
-  return window.supabase.createClient(
-    'https://etwwriloppklhhkmswpr.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
-  );
+if (!supabaseClient) {
+  console.error("❌ Supabase failed to initialize");
 }
 
-// safer init (runs whenever ready, not just DOMContentLoaded)
-(function bootSupabase() {
-
-  function tryInit() {
-    if (supabaseClient) return;
-
-    supabaseClient = initSupabase();
-
-    if (supabaseClient) {
-      supabaseReady = true;
-      console.log("✅ Supabase READY");
-    }
-  }
-
-  // try immediately
-  tryInit();
-
-  // retry until library exists (fixes race condition)
-  const interval = setInterval(() => {
-    tryInit();
-    if (supabaseReady) clearInterval(interval);
-  }, 300);
-
-})();let lastUploadedScore = null;
+let lastUploadedScore = null;
 
 window.saveResult = async function saveResult(text) {
 
-  console.log("🚀 saveResult CALLED:", text);
-
-  // wait until supabase is ready instead of failing
   if (!supabaseClient) {
-    console.warn("⏳ Supabase not ready yet — retrying...");
-
-    let retries = 0;
-
-    while (!supabaseClient && retries < 10) {
-      await new Promise(r => setTimeout(r, 300));
-      retries++;
-    }
-
-    if (!supabaseClient) {
-      console.error("❌ Supabase still not ready after retries");
-      return;
-    }
+    console.error("❌ No Supabase client");
+    return;
   }
+
   // ======================
   // NORMALIZE INPUT
   // ======================
@@ -8205,6 +8565,8 @@ window.saveResult = async function saveResult(text) {
 
 </body>
 </html>
+
+
 
 
 
