@@ -2867,20 +2867,27 @@ safeInsert(activeSpeechTarget, finalText + " ");
     }, true);
   }
 
-  const submitButtons = document.querySelectorAll('button[id$="SubmitBtn"], button[id$="submit"]');
+  const submitButtons = document.querySelectorAll('button[id$="SubmitBtn"], button[id$="submit"], button[id*="submit"], button[class*="submit"]');
 
   submitButtons.forEach(submitBtn => {
     submitBtn.addEventListener('click', () => {
-      const section = submitBtn.closest('section') || document;
+      const section = submitBtn.closest('section') || document.body;
 
       // Flexible scoreboard detection
-      const scoreboardSelectors = ['pre', '.scoreboard pre', '#result', '.output'];
-      let scoreboard = null;
-      for (const sel of scoreboardSelectors) {
-        scoreboard = section.querySelector(sel);
-        if (scoreboard) break;
-      }
-      if (!scoreboard) return;
+const scoreboard =
+  section.querySelector('pre') ||
+  section.querySelector('.scoreboard pre') ||
+  section.querySelector('#result') ||
+  section.querySelector('.output') ||
+  document.getElementById('vocabScoreOutput') ||
+  document.getElementById('gsScoreText') ||
+  document.querySelector('[id*="ScoreOutput"]') ||
+  document.querySelector('[id*="ScoreText"]');
+
+if (!scoreboard) {
+  console.warn("⚠️ No scoreboard found for Supabase capture");
+  return;
+}
 
       // Name/ID inputs
       const nameInput = section.querySelector('input[id*="Name"], input[name*="name"], #name');
@@ -2904,7 +2911,17 @@ safeInsert(activeSpeechTarget, finalText + " ");
         const idLower = btn.id.toLowerCase();
         const classLower = btn.className?.toLowerCase() || '';
         const isTextButton = /text|txt/.test(idLower) || /text|txt/.test(classLower);
-        hijackDownloadButton(btn, () => scoreboard.textContent.trim(), getFilename, isTextButton);
+        hijackDownloadButton(btn, () => {
+  const el =
+    section.querySelector('pre') ||
+    section.querySelector('.scoreboard pre') ||
+    section.querySelector('#result') ||
+    section.querySelector('.output') ||
+    document.getElementById('vocabScoreOutput') ||
+    document.getElementById('gsScoreText');
+
+  return (el?.value || el?.innerText || el?.textContent || '').trim();
+}, getFilename, isTextButton);
       });
 
     }, true);
