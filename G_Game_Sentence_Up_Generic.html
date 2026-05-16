@@ -1234,9 +1234,12 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
   hasSubmittedScore = true;
 
   updateScoreboard();
-  scoreboard.style.display = 'block';
-  scoreButtons.style.display = 'flex';
-  document.getElementById('submitBtn').disabled = true;
+scoreboard.style.display = 'block';
+scoreButtons.style.display = 'flex';
+document.getElementById('submitBtn').disabled = true;
+
+// ✅ SEND FINAL SCOREBOARD TO SUPABASE
+window.saveResult(scoreboard.textContent);
 });
 
 
