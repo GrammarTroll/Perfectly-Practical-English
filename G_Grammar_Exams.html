@@ -6722,8 +6722,12 @@ exercise.dataset.percentage = percentage;
     const percentage = totalExercises > 0 ? Math.round((correctCount / totalExercises) * 100) : 0;
 
     // Display in scoreboard
-    const board = sub.querySelector('.quiz-scoreboard');
-    if (board) {
+const board = sub.querySelector('.quiz-scoreboard');
+if (board) {
+  const dataEl = board.querySelector('.scoreboard-data');
+  if (dataEl) {
+    window.saveResult(dataEl.textContent); // ✅ ADD THIS
+  }
       const dataEl = board.querySelector('.scoreboard-data');
       const name = sub.querySelector('.quiz-name')?.value || 'Anonymous';
       const id   = sub.querySelector('.quiz-id')?.value || 'N/A';
