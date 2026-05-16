@@ -2887,10 +2887,10 @@ const scoreboard =
   section.querySelector('.scoreboard pre') ||
   section.querySelector('#result') ||
   section.querySelector('.output') ||
+  section.querySelector('[id*="ScoreOutput"]') ||
+  section.querySelector('[id*="ScoreText"]') ||
   document.getElementById('vocabScoreOutput') ||
-  document.getElementById('gsScoreText') ||
-  document.querySelector('[id*="ScoreOutput"]') ||
-  document.querySelector('[id*="ScoreText"]');
+  document.getElementById('gsScoreText');
 
 if (!scoreboard) {
   console.warn("⚠️ No scoreboard found for Supabase capture");
@@ -2928,7 +2928,7 @@ if (!scoreboard) {
     document.getElementById('vocabScoreOutput') ||
     document.getElementById('gsScoreText');
 
-  return (el?.value || el?.innerText || el?.textContent || '').trim();
+  return (el?.value ?? el?.textContent ?? el?.innerText ?? '').trim();
 }, getFilename, isTextButton);
       });
 
