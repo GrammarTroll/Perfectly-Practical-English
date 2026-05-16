@@ -2305,8 +2305,8 @@ Add a concluding paragraph.
     const chars = bodyText.length;
     const sentences = (bodyText.match(/[.!?]+/g) || []).length;
 
-    scoreOutput.textContent =
-`${filename}|Section: Writing|Name: ${nm}|ID: ${id}|Date: ${dateStr}|Characters: ${chars}|~Sentences: ${sentences}
+scoreOutput.textContent =
+`${filename}|Section:Writing|Name:${nm}|ID:${id}|Date:${dateStr}|Characters:${chars}|Sentences:${sentences}`;
 
 ${bodyText}`;
   }
