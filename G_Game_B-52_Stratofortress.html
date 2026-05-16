@@ -1268,7 +1268,7 @@ update();
 // --- Sentences array (to be initialized) ---
 let sentences = [];
 let totalExercises = 0;
-// let sectionAnswerPool = [];
+<!--let sectionAnswerPool = [];-->
 
 // --- Load sentences from raw text or external file ---
 async function initSentences() {
@@ -1590,15 +1590,9 @@ submitBtn.disabled = true;
         `${fileName}|${nameInput.value.trim()}|${idInput.value.trim()}|` +
         `${dateStr}|${correctWords}/${totalExercises}|${pct}%`;
 
-
-// --- Supabase Spot ---
-
-scoreboardContainer.textContent = scoreLine;
-scoreButtons.style.display = 'flex';
-
-saveResult(scoreLine);
+    scoreboardContainer.textContent = scoreLine;
+    scoreButtons.style.display = 'flex';
 }
-
 function resetGame(){
     window.activeSentences.forEach(s=>{if(s.span.parentNode)s.span.parentNode.removeChild(s.span);});
     window.activeSentences=[]; planeX=-100; plane.style.left=planeX+'px';
@@ -1639,43 +1633,10 @@ document.getElementById('downloadPngBtn').addEventListener('click', () => {
     });
 });
 // --- Event Listeners ---
+startBtn.addEventListener('click',startGame);
+submitBtn.addEventListener('click',submitResults);
+typingInput.addEventListener('input',handleTyping);
 
-startBtn.addEventListener(
-  'click',
-  startGame
-);
-
-submitBtn.addEventListener(
-  'click',
-  submitResults
-);
-
-/*
-  OPTIONAL typingInput
-  (safe if absent)
-*/
-
-if (
-  typeof typingInput !== "undefined" &&
-  typingInput &&
-  typeof handleTyping === "function"
-) {
-
-  typingInput.addEventListener(
-    'input',
-    handleTyping
-  );
-
-  console.log(
-    "typingInput hooked"
-  );
-
-} else {
-
-  console.log(
-    "typingInput missing — skipped"
-  );
-}
 
 // --- Green Border ---
 const borderDiv = document.createElement('div');
@@ -1735,6 +1696,7 @@ const swoosh = new SwooshSound();
 
 
 </script>
+
 
 
 
@@ -1803,9 +1765,9 @@ function generateMCOptions(correct, pool) {
 </script>
 
 <script>
-if (window.gamePausedByVisibility) {
-  console.log("Game paused by visibility");
-}
+
+if (window.gamePausedByVisibility) return;
+
 </script>
 
 <script>
@@ -2117,61 +2079,92 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
-
 <!-- SUPABASE LIBRARY -->
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+
 // ======================================
-// SUPABASE INITIALIZATION
+// SUPABASE INITIALIZATION (SAFE)
 // ======================================
-const supabaseClient = window.supabase.createClient(
+
+const supabase = window.supabase?.createClient?.(
   'https://etwwriloppklhhkmswpr.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
 );
-</script>
 
+const supabaseReady = !!supabase;
 
+// Prevent duplicate uploads
+let lastUploadedScore = null;
 
 // ======================================
-// SAVE RESULT TO SUPABASE
+// UNIVERSAL SCORE EXPORTER (SAFE)
 // ======================================
 
 async function saveResult(textToSave) {
 
-  if (
-    !textToSave ||
-    typeof textToSave !== 'string'
-  ) {
+  if (!supabaseReady) return;
+
+  if (!textToSave || typeof textToSave !== 'string') {
     console.error('Invalid scoreboard text.');
     return;
   }
 
-  console.log('Saving:', textToSave);
+  // prevent duplicate submissions
+  if (textToSave === lastUploadedScore) return;
+  lastUploadedScore = textToSave;
 
-  const { data, error } = await supabase
-    .from('results')
-    .insert([
-      {
-        result_text: textToSave
-      }
-    ])
-    .select();
+  try {
+    const { error } = await supabase
+      .from('results')
+      .insert([
+        {
+          result_text: textToSave
+        }
+      ]);
 
-  if (error) {
+    if (error) {
+      console.error('Supabase error:', error);
+    } else {
+      console.log('Score saved.');
+    }
 
-    console.error('Supabase error:', error);
-
-  } else {
-
-    console.log('Score saved successfully.');
-    console.log(data);
-
+  } catch (err) {
+    console.error('Supabase crash:', err);
   }
+}
+
+
+// ======================================
+// PASSIVE SCORE DETECTOR (NO GAME CHANGES)
+// ======================================
+
+const scoreboardContainer = document.getElementById('scoreboardContainer');
+
+if (scoreboardContainer) {
+
+  const observer = new MutationObserver(() => {
+
+    const text = scoreboardContainer.textContent?.trim();
+
+    // only send final-looking results
+    if (!text) return;
+    if (!text.includes('%')) return; // your final score format check
+
+    saveResult(text);
+  });
+
+  observer.observe(scoreboardContainer, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
 
 }
 
 </script>
+
 </body>
 </html>
 
