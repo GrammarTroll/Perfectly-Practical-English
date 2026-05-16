@@ -1982,12 +1982,15 @@ function handleVocabSubmit(){
     }
   });
 
-  const name = document.getElementById('vocabName').value.trim();
-  const id = document.getElementById('vocabStudentId').value.trim();
+  const nameEl = document.getElementById('vocabName');
+const idEl = document.getElementById('vocabStudentId');
+
+const name = nameEl ? nameEl.value.trim() : "";
+const id = idEl ? idEl.value.trim() : "";
   const dt = new Date().toLocaleString('en-GB',{hour12:false});
   const file = location.pathname.split('/').pop();
 
-const total = vocabPairs.length;
+const total = Array.isArray(vocabPairs) ? vocabPairs.length : 0;
 const percent = total === 0 ? 0 : Math.round((score / total) * 100);
 
 const resultText =
@@ -1996,7 +1999,11 @@ const resultText =
 document.getElementById('vocabScoreOutput').textContent = resultText;
 document.getElementById('vocabScoreboard').style.display = 'block';
 
-saveResult(resultText);
+if (typeof saveResult === "function") {
+  saveResult(resultText);
+} else {
+  console.warn("⚠️ saveResult not available");
+}
 
 }
 
