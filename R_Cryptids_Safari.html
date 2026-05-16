@@ -2237,7 +2237,10 @@ const resultText = `${filename}|${section.replace(/:+$/, '').trim()}: ${subsecti
       if (dataEl) dataEl.textContent = resultText;
 
 if (window.saveResult) {
-  window.saveResult(resultText);
+  const finalResultText = board.querySelector('.scoreboard-data')?.textContent;
+if (finalResultText && window.saveResult) {
+  window.saveResult(finalResultText);
+}
 }
 
       board.style.display = 'block';
