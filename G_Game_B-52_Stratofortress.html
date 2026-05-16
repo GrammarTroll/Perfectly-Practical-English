@@ -2119,7 +2119,7 @@ window.saveResult = async function saveResult(text) {
     }
 
     cleaned = cleaned
-      .replace(/\s+/g, " ")   // collapse whitespace/newlines
+      .replace(/\s+/g, " ")
       .trim();
 
   } catch (err) {
@@ -2143,10 +2143,10 @@ window.saveResult = async function saveResult(text) {
   console.log("📤 Sending to Supabase:", cleaned);
 
   // =========================
-  // INSERT (single column safe)
+  // INSERT (FIXED TABLE NAME)
   // =========================
   const { data, error } = await supabaseClient
-.from("scoreboard_raw")
+    .from("results")   // ✅ FIXED
     .insert([
       {
         result_text: cleaned
