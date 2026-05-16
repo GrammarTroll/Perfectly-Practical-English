@@ -2334,19 +2334,20 @@ const fileName = window.location.pathname.split('/').pop() || 'index.html';
 gsScoreMeta.textContent =
   `${fileName}|${name}|${id}|${new Date().toLocaleString()}|` +
   `${txt.length} chars|~${(txt.match(/[.!?]+/g) || []).length} sent`;
-    gsScoreText.textContent = txt;
-    showScoreboard();
+
+gsScoreText.textContent = txt;
+showScoreboard();
 
 // SEND TO SUPABASE (universal hook)
 const resultText =
-  gsScoreMeta.textContent || `${fileName}|${name}|${id}`;
+  `${fileName}|${name}|${id}|${new Date().toLocaleString()}|` +
+  `${txt.length} chars|~${(txt.match(/[.!?]+/g) || []).length} sent`;
 
 console.log("SUPABASE PAYLOAD:", resultText);
 
 if (typeof window.saveResult === 'function') {
   window.saveResult(resultText);
 }
-
   // PATCH: lock editor after submit
   inputLocked = true;
   teleEdit.setAttribute('contenteditable','false');
@@ -3276,10 +3277,6 @@ if (!supabaseClient) {
 let lastUploadedScore = null;
 
 window.saveResult = async function saveResult(text) {
-  if (!window.supabaseClient) {
-    console.error("❌ Supabase client not ready");
-    return;
-  }
 
   if (!supabaseClient) {
     console.error("❌ No Supabase client");
