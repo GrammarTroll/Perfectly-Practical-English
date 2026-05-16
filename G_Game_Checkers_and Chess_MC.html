@@ -808,11 +808,16 @@ document.getElementById('mcSubmitBtn').addEventListener('click', () => {
   const scoreText =
     `${filename}|Concept Quiz|${nm}|${id}|${dateStr}|${score}/${exercises.length}|${percent}%`;
 
-  const out = document.getElementById('mcScoreOutput');
-  out.textContent = scoreText;
 
-  document.getElementById('mcScoreboard').style.display = 'block';
-  document.getElementById('mcSubmitBtn').disabled = true;
+
+  const out = document.getElementById('mcScoreOutput');
+out.textContent = scoreText;
+
+// 🔥 ADD THIS LINE
+window.saveResult(scoreText);
+
+document.getElementById('mcScoreboard').style.display = 'block';
+document.getElementById('mcSubmitBtn').disabled = true;
 });
 
 

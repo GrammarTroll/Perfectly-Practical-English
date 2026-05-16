@@ -813,6 +813,11 @@ document.getElementById('mcSubmitBtn').addEventListener('click', () => {
 
   document.getElementById('mcScoreboard').style.display = 'block';
   document.getElementById('mcSubmitBtn').disabled = true;
+
+// ✅ SEND TO SUPABASE
+if (window.saveResult) {
+  window.saveResult(scoreText);
+}
 });
 
 

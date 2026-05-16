@@ -1453,8 +1453,13 @@ function submitResults(){
     `${nameInput.value.trim()}|${idInput.value.trim()}|` +
     `${dateStr}|${correctWords}/${totalWords}|${pct}%`;
 
-  scoreboardContainer.textContent = scoreLine;
-  scoreButtons.style.display = 'flex';
+scoreboardContainer.textContent = scoreLine;
+scoreButtons.style.display = 'flex';
+
+// SUPABASE SAVE (ADDED)
+if (window.saveResult) {
+  window.saveResult(scoreLine);
+}
 }
 
       function resetGameState(){activeWords=[];currentTypedWord=null;nextWordIndex=0;totalWords=0;correctWords=0;}

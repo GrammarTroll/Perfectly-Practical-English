@@ -1119,7 +1119,8 @@ function submitResults() {
     `${dateStr}|${correctWords}/${totalWords}|${pct}%`;
 
   scoreboardContainer.textContent = scoreLine;
-  scoreButtons.style.display = 'flex';
+scoreButtons.style.display = 'flex';
+saveResult(scoreLine);
 }
 
 // --- Score Buttons ---
