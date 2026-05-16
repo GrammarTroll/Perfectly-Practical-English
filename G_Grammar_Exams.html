@@ -6692,13 +6692,10 @@ const percentage = correctCount * 100;
 
 // store score in the element so Submit can display later
 exercise.dataset.score = correctCount;
-👉 WITH THIS:
-  exercise.dataset.percentage = percentage;
+exercise.dataset.percentage = percentage;
 });
 
-})(); // <-- CLOSE IIFE PROPERLY HERE
 </script>
-
 
 
 
