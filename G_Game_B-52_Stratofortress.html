@@ -2146,7 +2146,7 @@ window.saveResult = async function saveResult(text) {
   // INSERT (single column safe)
   // =========================
   const { data, error } = await supabaseClient
-    .from("results")
+.from("scoreboard_raw")
     .insert([
       {
         result_text: cleaned
