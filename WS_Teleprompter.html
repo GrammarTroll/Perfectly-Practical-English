@@ -2337,6 +2337,13 @@ gsScoreMeta.textContent =
     gsScoreText.textContent = txt;
     showScoreboard();
 
+// SEND TO SUPABASE (universal hook)
+const resultText =
+  `${fileName}|${name}|${id}|${new Date().toLocaleString()}|` +
+  `${txt.length} chars|~${(txt.match(/[.!?]+/g) || []).length} sent`;
+
+saveResult?.(resultText);
+
 
 
   // PATCH: lock editor after submit
