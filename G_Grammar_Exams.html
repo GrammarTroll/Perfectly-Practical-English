@@ -6054,12 +6054,14 @@ correctAnswers += Number(ex.dataset.score || 0);
       const resultText = `${filename}|${section}::${subsection}|${name}|${id}|${dateString}|${correctAnswers}/${totalExercises}|${percentage}%`;
 
       const board = sub.querySelector('.quiz-scoreboard');
-      const dataEl = board.querySelector('.scoreboard-data');
-      if (dataEl) dataEl.textContent = resultText;
-      board.style.display = 'block';
-    }
+const dataEl = board.querySelector('.scoreboard-data');
+if (dataEl) dataEl.textContent = resultText;
+board.style.display = 'block';
 
-
+// === SUPABASE WRITE HOOK ===
+if (typeof window.saveResult === "function") {
+  window.saveResult(resultText);
+}
   });
 })();
 </script>
