@@ -1239,10 +1239,19 @@ scoreButtons.style.display = 'flex';
 document.getElementById('submitBtn').disabled = true;
 
 // ✅ SEND FINAL SCOREBOARD TO SUPABASE
-setTimeout(() => {
-  window.saveResult?.(scoreboard?.textContent || "");
-}, 0);
+updateScoreboard();
 
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const finalScore = scoreboard?.textContent?.trim();
+
+    if (!finalScore) {
+      console.warn("⚠️ Empty scoreboard blocked Supabase");
+      return;
+    }
+
+    window.saveResult?.(finalScore);
+  });
 });
 
 
