@@ -1239,7 +1239,10 @@ scoreButtons.style.display = 'flex';
 document.getElementById('submitBtn').disabled = true;
 
 // ✅ SEND FINAL SCOREBOARD TO SUPABASE
-window.saveResult(scoreboard.textContent);
+setTimeout(() => {
+  window.saveResult?.(scoreboard?.textContent || "");
+}, 0);
+
 });
 
 
