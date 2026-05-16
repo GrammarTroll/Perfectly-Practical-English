@@ -2339,12 +2339,13 @@ gsScoreMeta.textContent =
 
 // SEND TO SUPABASE (universal hook)
 const resultText =
-  `${fileName}|${name}|${id}|${new Date().toLocaleString()}|` +
-  `${txt.length} chars|~${(txt.match(/[.!?]+/g) || []).length} sent`;
+  gsScoreMeta.textContent || `${fileName}|${name}|${id}`;
 
-saveResult?.(resultText);
+console.log("SUPABASE PAYLOAD:", resultText);
 
-
+if (typeof window.saveResult === 'function') {
+  window.saveResult(resultText);
+}
 
   // PATCH: lock editor after submit
   inputLocked = true;
