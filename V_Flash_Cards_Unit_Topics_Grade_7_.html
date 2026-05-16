@@ -129,18 +129,39 @@
   right: -3px;
 }
 
+
+.reading-highlight {
+  background: #cce5ff;
+  transition: background 0.2s ease;
+}
+
+.read-line {
+  display: block;
+}
+
+#scoreOutput {
+  white-space: pre-wrap;      /* keeps line breaks */
+  word-break: break-word;     /* breaks long strings */
+  overflow-wrap: anywhere;    /* forces wrap if needed */
+}
+
 </style>
 </head>
 <body>
 <div id="layout">
   <h2></h2>
 
-  <div class="top-bar">
-    <input id="name" type="text" placeholder="Name" autocomplete="off" />
-    <input id="studentId" type="text" placeholder="ID" autocomplete="off" />
-    <button id="finishBtn">Finish</button>
-  </div>
+<!-- TOP BAR (UNCHANGED FUNCTIONALLY) -->
+<div class="top-bar">
+  <input id="name" type="text" placeholder="Name" autocomplete="off" />
+  <input id="studentId" type="text" placeholder="ID" autocomplete="off" />
 
+  <!-- 🔊 This becomes your Start / Pause / Resume button -->
+  <button id="finishBtn" class="audio-btn">🔊</button>
+</div>
+
+
+<!-- SECTION CONTROLS -->
 <div class="formRow">
   <button type="button" id="sectionUp">▲</button>
 
@@ -151,17 +172,26 @@
   <button type="button" id="sectionDown">▼</button>
 </div>
 
+<!-- HEADER (directly under selector) -->
+<div id="vocabHeader" style="margin: 6px 0 10px 0;">
+  Click to view / hide the complete list.
+</div>
 
-  <div id="vocabHeader">Click to view / hide the complete list.</div>
+<!-- READING AREA -->
+<div id="readingArea">
+
+  <!-- VOCAB LIST -->
   <ul id="vocabList"></ul>
 
-
-  <div class="flashcard-container visible" id="flashcardContainer">
+  <!-- FLASHCARD (single, correct version only) -->
+  <div class="flashcard-container" id="flashcardContainer">
     <div class="flashcard" id="flashcard">
-      <div class="front"></div>
-      <div class="back"></div>
+      <div class="front read-line"></div>
+      <div class="back read-line"></div>
     </div>
   </div>
+
+</div>
 
   <input type="text" id="exampleInput" class="visible" placeholder="Type your example sentence..." />
 
@@ -1354,7 +1384,9 @@ const vocabHeader = document.getElementById('vocabHeader');
 
 // Render vocab list
 function renderVocabList() {
-  vocabList.innerHTML = vocabPairs.map(p => `<li>${p.word}: ${p.definition}</li>`).join('');
+  vocabList.innerHTML = vocabPairs.map(p =>
+    `<li class="read-line">${p.word}: ${p.definition}</li>`
+  ).join('');
 }
 vocabHeader.addEventListener('click', () => {
   vocabList.style.display = vocabList.style.display === 'none' ? 'block' : 'none';
@@ -1377,7 +1409,7 @@ function updateFlashcard() {
 
 
 function checkInputs() {
-  finishBtn.style.display = (nameEl.value.trim() && idEl.value.trim()) ? 'inline-block' : 'none';
+  finishBtn.style.display = 'inline-block';
 }
 
 flashcard.addEventListener('click', () => flashcard.classList.toggle('flipped'));
@@ -1404,27 +1436,44 @@ if (flashcardIndex < vocabPairs.length - 1) {
 
   else { showScoreboard(); }
 });
-finishBtn.addEventListener('click', showScoreboard);
+// finishBtn.addEventListener('click', showScoreboard);
 
 function showScoreboard() {
   const name = nameEl.value.trim() || 'Unknown';
   const sid = idEl.value.trim() || 'N/A';
   const now = new Date();
-  const formattedDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
 
-  let output = `flashcards.txt|${name}|${sid}|${formattedDate}\n\n`;
+  const formattedDate =
+    `${String(now.getDate()).padStart(2,'0')}/` +
+    `${String(now.getMonth()+1).padStart(2,'0')}/` +
+    `${now.getFullYear()} ` +
+    `${String(now.getHours()).padStart(2,'0')}:` +
+    `${String(now.getMinutes()).padStart(2,'0')}:` +
+    `${String(now.getSeconds()).padStart(2,'0')}`;
 
-  vocabPairs.forEach((p,i) =>
-    output += `${i+1}. ${p.word}: ${studentSentences[i] || '[No sentence]'}\n`
-  );
+  // ✅ GET ORIGINAL HTML FILE NAME
+  const fileName = window.location.pathname.split('/').pop() || 'unknown.html';
 
+  // ✅ GET CURRENT SECTION NAME
+  const sectionName =
+    window.getSelectedSectionIndex && window.getSelectedSectionIndex() !== 0
+      ? document.querySelector("#sectionWheelContainer div div:nth-child(" + (window.getSelectedSectionIndex()+1) + ")")?.textContent || "Unknown Section"
+      : "No Section";
+
+  // ✅ NEW HEADER FORMAT
+  let output = `${fileName}|${sectionName}|${name}|${sid}|${formattedDate}\n\n`;
+
+  // KEEP REST THE SAME
+vocabPairs.forEach((p, i) => {
+  const sentence = (studentSentences[i] || "").trim();
+
+  output += `${i+1}. ${sentence ? sentence : '[No response]'}\n`;
+});
   scoreOutput.textContent = output;
-  scoreboard.style.display = 'block';
+scoreboard.style.display = 'block';
 
-  // ✅ SUPABASE WRITE (only if enabled)
-  if (window.__SUPABASE_WRITE_ENABLED__ === true) {
-    saveResult(scoreOutput.textContent);
-  }
+window.saveResult?.(output);
+
 }
 // Copy / Download / PNG
 document.getElementById('copyBtn').addEventListener('click', ()=> navigator.clipboard.writeText(scoreOutput.textContent).then(()=>alert('Copied!'))); 
@@ -1468,7 +1517,7 @@ document.body.appendChild(borderDiv);
 
   function getTextToRead() {
     if (vocabList.style.display !== "none") {
-      const header = "Signal Words";
+      const header = "Vocabulary List. ";
       const items = [...vocabList.querySelectorAll("li")].map(li => stripEmojis(li.innerText)).join(". ");
       return header + items;
     }
@@ -1480,6 +1529,7 @@ document.body.appendChild(borderDiv);
   function createUtterance(text) {
     if (!text) return null;
     const u = new SpeechSynthesisUtterance(stripEmojis(text));
+u.rate = 0.75;   // 👈 slower speech (default is 1.0)
     u.onend = () => { speaking = false; paused = false; };
     return u;
   }
@@ -1513,11 +1563,13 @@ document.body.appendChild(borderDiv);
     controls.style.marginLeft = "auto";
     controls.style.alignItems = "center";
 
-    const btns = [
-      { text: "⏮️", title: "Restart", action: restartReading },
-      { text: "⏸️", title: "Pause/Resume", action: togglePause },
-      { text: "▶️", title: "Start", action: startReading }
-    ];
+/*
+const btns = [
+  { text: "⏮️", title: "Restart", action: restartReading },
+  { text: "⏸️", title: "Pause/Resume", action: togglePause },
+  { text: "▶️", title: "Start", action: startReading }
+];
+*/
 
     btns.forEach(b => {
       const btn = document.createElement("button");
@@ -1656,6 +1708,10 @@ document.body.appendChild(borderDiv);
 
 })();
 </script>
+
+
+
+
 
 
 
@@ -1972,6 +2028,320 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
+<script>
+(function () {
+  const synth = window.speechSynthesis;
+  const finishBtn = document.getElementById("finishBtn");
+
+  let utterance = null;
+  let textNodes = [];
+  let currentIndex = 0;
+  let state = "idle"; // idle | speaking | paused
+
+  /* =========================
+     TEXT SELECTION → NODE MAP
+  ========================= */
+
+function getAllReadableNodes() {
+  const walker = document.createTreeWalker(
+    document.getElementById("readingArea"),
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (node.parentElement.closest("script, style, button, input")) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    return nodes;
+  }
+
+  function findStartIndex(selection) {
+    if (!selection.anchorNode) return 0;
+    return textNodes.findIndex(n => n === selection.anchorNode);
+  }
+
+  /* =========================
+     HIGHLIGHT + SCROLL
+  ========================= */
+
+  let currentHighlight = null;
+
+  function highlightNode(node) {
+    if (!node || !node.parentElement) return;
+
+    if (currentHighlight) {
+      currentHighlight.style.background = "";
+    }
+
+    const el = node.parentElement;
+    el.style.background = "#cce5ff"; // light blue
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    currentHighlight = el;
+  }
+
+  /* =========================
+     SPEECH ENGINE
+  ========================= */
+
+  function speakNext() {
+    if (currentIndex >= textNodes.length) {
+      stop();
+      return;
+    }
+
+    const node = textNodes[currentIndex];
+    const text = node.nodeValue.trim();
+
+    if (!text) {
+      currentIndex++;
+      speakNext();
+      return;
+    }
+
+    highlightNode(node);
+
+    utterance = new SpeechSynthesisUtterance(text);
+
+    utterance.onend = () => {
+      currentIndex++;
+      speakNext();
+    };
+
+    synth.speak(utterance);
+  }
+
+  function startFromSelection() {
+    const selection = window.getSelection();
+
+    if (!selection || selection.isCollapsed) {
+      alert("Select a word first.");
+      return;
+    }
+
+    textNodes = getAllReadableNodes();
+    currentIndex = findStartIndex(selection);
+
+    synth.cancel();
+    state = "speaking";
+    updateButton();
+
+    speakNext();
+  }
+
+  function pause() {
+    synth.pause();
+    state = "paused";
+    updateButton();
+  }
+
+  function resume() {
+    synth.resume();
+    state = "speaking";
+    updateButton();
+  }
+
+  function stop() {
+    synth.cancel();
+    state = "idle";
+    updateButton();
+
+    if (currentHighlight) {
+      currentHighlight.style.background = "";
+      currentHighlight = null;
+    }
+  }
+
+  /* =========================
+     BUTTON STATE MACHINE
+  ========================= */
+
+  function updateButton() {
+    if (state === "idle") finishBtn.textContent = "🔊";
+    if (state === "speaking") finishBtn.textContent = "⏸️";
+    if (state === "paused") finishBtn.textContent = "▶️";
+  }
+
+  finishBtn.addEventListener("click", () => {
+    if (state === "idle") {
+      startFromSelection();
+    } else if (state === "speaking") {
+      pause();
+    } else if (state === "paused") {
+      resume();
+    }
+  });
+
+  /* =========================
+     OPTIONAL: STOP ON NEW SELECTION
+  ========================= */
+
+  document.addEventListener("selectionchange", () => {
+    if (state !== "idle") {
+      stop();
+    }
+  });
+
+  updateButton();
+})();
+</script>
+
+<script>
+(function () {
+
+  /* =========================
+     1. PALE BLUE SELECTION STYLE
+  ========================= */
+  const style = document.createElement("style");
+  style.textContent = `
+    ::selection {
+      background: rgba(140, 190, 255, 0.25); /* very pale blue */
+      color: inherit;
+    }
+
+    ::-moz-selection {
+      background: rgba(140, 190, 255, 0.25);
+      color: inherit;
+    }
+
+    /* remove tap flash */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+  `;
+  document.head.appendChild(style);
+
+  /* =========================
+     2. WORD SELECTION ON CLICK
+  ========================= */
+
+  function selectWord(el, wordIndex) {
+    const text = el.textContent;
+    const words = text.split(/(\s+)/); // keep spaces
+
+    let charStart = 0;
+    let start = 0;
+    let end = 0;
+
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      const len = w.length;
+
+      if (i === wordIndex) {
+        start = charStart;
+        end = charStart + len;
+        break;
+      }
+
+      charStart += len;
+    }
+
+    const range = document.createRange();
+    const textNode = el.firstChild;
+
+    if (!textNode || textNode.nodeType !== 3) return;
+
+    range.setStart(textNode, start);
+    range.setEnd(textNode, end);
+
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  /* =========================
+     3. ATTACH CLICK HANDLER
+  ========================= */
+
+  document.addEventListener("click", function (e) {
+    const target = e.target;
+
+    // only operate on plain text elements
+    if (!target || target.children.length > 0) return;
+
+    const text = target.textContent;
+    if (!text || !text.includes(" ")) return;
+
+    // find clicked word position using caret
+    const range = document.caretRangeFromPoint
+      ? document.caretRangeFromPoint(e.clientX, e.clientY)
+      : null;
+
+    if (!range || !range.startContainer) return;
+
+    const node = range.startContainer;
+    if (node.nodeType !== 3) return;
+
+    const words = text.split(/(\s+)/);
+    let offset = range.startOffset;
+
+    let charCount = 0;
+    let wordIndex = 0;
+
+    for (let i = 0; i < words.length; i++) {
+      charCount += words[i].length;
+      if (offset <= charCount) {
+        wordIndex = i;
+        break;
+      }
+    }
+
+    selectWord(target, wordIndex);
+  });
+
+})();
+</script>
+
+<script>
+(function () {
+
+  /* =========================
+     1. EMOJI STRIPPER (ROBUST)
+  ========================= */
+  function removeEmojis(text) {
+    return text
+      // modern emoji ranges
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+      // variation selectors + modifiers
+      .replace(/\uFE0F/g, "")
+      .replace(/\u200D/g, "")
+      .trim();
+  }
+
+  /* =========================
+     2. WRAP SPEECH SYNTHESIS
+  ========================= */
+
+  const originalSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
+
+  window.speechSynthesis.speak = function (utterance) {
+    if (utterance && utterance.text) {
+      utterance.text = removeEmojis(utterance.text);
+    }
+    return originalSpeak(utterance);
+  };
+
+  /* =========================
+     3. OPTIONAL SAFETY WRAPPER
+     (for direct SpeechSynthesisUtterance usage)
+  ========================= */
+
+  window.createCleanUtterance = function (text, options = {}) {
+    const clean = removeEmojis(text);
+    const u = new SpeechSynthesisUtterance(clean);
+
+    Object.assign(u, options);
+    return u;
+  };
+
+})();
+</script>
+
 <!-- SUPABASE LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -1989,10 +2359,6 @@ if (!supabaseClient) {
 let lastUploadedScore = null;
 
 window.saveResult = async function saveResult(text) {
-  if (!window.__SUPABASE_WRITE_ENABLED__) {
-    console.warn("Supabase write blocked (disabled by default)");
-    return;
-  }
 
   if (!supabaseClient) {
     console.error("❌ No Supabase client");
@@ -2046,6 +2412,8 @@ window.saveResult = async function saveResult(text) {
 };
 
 </script>
+
+
 
 </body>
 </html>
