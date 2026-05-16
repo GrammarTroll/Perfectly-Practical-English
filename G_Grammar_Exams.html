@@ -8096,6 +8096,7 @@ window.addEventListener("resize", adjustBodyPadding);
 <script>
 
 let supabaseClient = null;
+let supabaseReady = false;
 
 function initSupabase() {
   if (!window.supabase) {
@@ -8105,29 +8106,55 @@ function initSupabase() {
 
   return window.supabase.createClient(
     'https://etwwriloppklhhkmswpr.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqUW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...'
   );
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  supabaseClient = initSupabase();
+// safer init (runs whenever ready, not just DOMContentLoaded)
+(function bootSupabase() {
 
-  if (!supabaseClient) {
-    console.error("❌ Supabase init failed on DOM ready");
-  } else {
-    console.log("✅ Supabase ready");
+  function tryInit() {
+    if (supabaseClient) return;
+
+    supabaseClient = initSupabase();
+
+    if (supabaseClient) {
+      supabaseReady = true;
+      console.log("✅ Supabase READY");
+    }
   }
-});
 
-let lastUploadedScore = null;
+  // try immediately
+  tryInit();
+
+  // retry until library exists (fixes race condition)
+  const interval = setInterval(() => {
+    tryInit();
+    if (supabaseReady) clearInterval(interval);
+  }, 300);
+
+})();let lastUploadedScore = null;
 
 window.saveResult = async function saveResult(text) {
-  console.log("🚀 saveResult CALLED:", text);
-  if (!supabaseClient) {
-    console.error("❌ No Supabase client");
-    return;
-  }
 
+  console.log("🚀 saveResult CALLED:", text);
+
+  // wait until supabase is ready instead of failing
+  if (!supabaseClient) {
+    console.warn("⏳ Supabase not ready yet — retrying...");
+
+    let retries = 0;
+
+    while (!supabaseClient && retries < 10) {
+      await new Promise(r => setTimeout(r, 300));
+      retries++;
+    }
+
+    if (!supabaseClient) {
+      console.error("❌ Supabase still not ready after retries");
+      return;
+    }
+  }
   // ======================
   // NORMALIZE INPUT
   // ======================
