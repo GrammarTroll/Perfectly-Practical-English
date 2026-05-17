@@ -855,7 +855,7 @@ function buildScoreString() {
 
   const raw = window.activeSectionText;
 
-  if (!raw) return "GAME OVER";
+  if (!raw) return "NO SECTION DATA";
 
   const correctOrder = raw
     .split("\n")
@@ -899,16 +899,19 @@ submitBtn.addEventListener("click", () => {
 
   const tiles = document.querySelectorAll(".tile");
 
-  if (!tiles.length) {
-    alert("No game running.");
-    return;
-  }
-
+if (!tiles.length) {
+  return "NO TILES FOUND";
+}
   // Optional: still try to build score, but NEVER block game over
-  const dataString = buildScoreString?.() || "GAME OVER";
+  const dataString = buildScoreString();
 
-  scoreboard.textContent = dataString;
-  scoreboard.style.display = "block";
+scoreboard.textContent = dataString;
+
+// 🔥 HARD FORCE VISIBILITY (overrides any CSS edge cases)
+scoreboard.style.display = "block";
+scoreboard.style.visibility = "visible";
+scoreboard.style.opacity = "1";
+scoreboard.style.height = "auto";
 
   if (scoreBtns) scoreBtns.style.display = "flex";
 
