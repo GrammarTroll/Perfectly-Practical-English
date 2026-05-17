@@ -2028,90 +2028,6 @@ setupCopyDownload(
   </script>
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(function () {
-  /* ===============================
-     1. SUPABASE SETUP
-     =============================== */
-  const supabase = window.supabase.createClient(
-    "https://rhmbuqwbjacvbobxmyvx.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJobWJ1cXdiamFjdmJvYnhteXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDkyNzAsImV4cCI6MjA4MTEyNTI3MH0.lcSeTgeFAr-I286W9yXEGxWmqGAP5fZPV9jsaaCvTY8"
-  );
-
-  /* ===============================
-     2. READ SCOREBOARD FROM DOM
-     =============================== */
-  function readScoreboard() {
-    const filename = document.getElementById("fileNameOutput")?.textContent || null;
-    const student_name = document.getElementById("userNameOutput")?.textContent || null;
-    const student_id = document.getElementById("userIdOutput")?.textContent || null;
-
-    const scoreText = document.getElementById("scoreOutput")?.textContent || "";
-    const match = scoreText.match(/(\d+)\/(\d+)\s+\(([\d.]+)%\)/);
-
-    return {
-      filename,
-      student_name,
-      student_id,
-      score: match ? Number(match[1]) : null,
-      percentage_correct: match ? Number(match[3]) : null,
-      extra_data: {
-        page: window.location.pathname,
-        sections: Array.from(
-          document.querySelectorAll(".section-score")
-        ).map(el => el.textContent)
-      }
-    };
-  }
-
-  /* ===============================
-     3. INSERT INTO SUPABASE
-     =============================== */
-  async function saveScoreboard() {
-    const row = readScoreboard();
-
-    console.log("📤 Sending to Supabase:", row);
-
-    const { data, error } = await supabase
-      .from("student_scores")
-      .insert([{
-        ...row,
-        date: new Date().toISOString()
-      }])
-      .select();
-
-    if (error) {
-      console.error("❌ Supabase insert failed:", error);
-    } else {
-      console.log("✅ Supabase insert success:", data);
-    }
-  }
-
-  /* ===============================
-     4. AUTO-HOOK INTO SUBMIT BUTTON
-     =============================== */
-  document.addEventListener("DOMContentLoaded", () => {
-    const submitBtn = document.getElementById("submitBtn");
-
-    if (!submitBtn) {
-      console.warn("⚠️ submitBtn not found");
-      return;
-    }
-
-    submitBtn.addEventListener("click", async () => {
-      // Wait a tick so scoreboard finishes rendering
-      setTimeout(saveScoreboard, 300);
-    });
-
-    console.log("✅ Supabase scoreboard auto-save active");
-  });
-
-})();
-
-
-</script>
-
 
 
 <script>
@@ -2336,7 +2252,7 @@ restartBtn.addEventListener('click', () => {
 });
 </script>
 
-<script>
+<!--<script>
   window.OVERLAY_ENABLED = false;
 
   (function(){
@@ -2472,7 +2388,7 @@ restartBtn.addEventListener('click', () => {
     setInterval(scanAndAssignOverlays, 700);
 
   })();
-</script>
+</script>-->
 
 
 <script>
@@ -2687,6 +2603,29 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 
+<script>
+(function () {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Hide scrollbar but keep scrolling */
+    html {
+      scrollbar-width: none;          /* Firefox */
+    }
+
+    body {
+      -ms-overflow-style: none;       /* IE / Edge legacy */
+    }
+
+    body::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;                  /* Chrome / Safari */
+    }
+  `;
+  document.head.appendChild(style);
+})();
+</script>
+
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -2712,7 +2651,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
-
 <script>
 
 (function(){
@@ -2723,14 +2661,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
 const RAW_TEXT = `
 
-How to play...
+How to use this page...
 
 1. Enter Name and ID.
-2. Select a category.
-3. Click Start to begin.
-4. Arrange the words in the correct order.
-5. Click Submit to see your score.
-6. Copy or download your score.
+2. Select a category to view the main list.
+3. If placeholder text is enabled, type the word into each tile.
+4. If tiles are blank, type each word the instructor reads into each tile.
+5. Correct spelling turns a tile green. A red tile is incorrectly spelled.
+6. You must match the tiles with the correct definition.
+6. Click on the tiles to select and click where you want them to go, from top to bottom.
+7. Click Submit to see your score.
+8. Click to copy or download your score.
 
 `;
 
@@ -2998,6 +2939,10 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
+
+<script src="/supabase-ingest.js"></script>
+
+
 <!-- SUPABASE LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -3073,6 +3018,7 @@ window.saveResult = async function saveResult(text) {
 
 </body>
 </html>
+
 
 
 
