@@ -883,7 +883,7 @@ selectSection(0, false);
 
   function buildScoreString() {
     const tiles = [...document.querySelectorAll(".tile")];
-    if (!tiles.length) return null; // REAL start condition
+    if (!tiles.length) return "";
 
     let correct = 0;
     const total = tiles.length;
