@@ -476,7 +476,7 @@ function shuffle(arr) {
 
 // ✅ Submit
 document.getElementById('submitBtn')?.addEventListener('click', () => {
-  const out = getScoreOutput();
+  const out = buildScoreString();
   document.getElementById('scoreboard').textContent = out;
   document.getElementById('scoreboard').style.display = 'block';
 
