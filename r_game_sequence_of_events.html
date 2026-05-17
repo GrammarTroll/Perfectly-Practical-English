@@ -315,10 +315,10 @@ window.activeSectionIndex = 0;
 document.getElementById("startBtn").addEventListener("click", () => {
   const index = window.getSelectedSectionIndex();
 
-  if (!index || index === 0) {
-    alert("Select a topic first.");
-    return;
-  }
+if (index == null || Number(index) === 0) {
+  alert("Select a topic first.");
+  return;
+}
 
   window.selectSectionByIndex(index);
 });
@@ -392,7 +392,12 @@ window.addEventListener("sectionchange", async (e) => {
   const index = e.detail?.index;
   const text  = e.detail?.text;
 
-  if (!index || index === 0 || !text || !text.trim()) return;
+  if (
+  index == null ||
+  Number(index) === 0 ||
+  !text ||
+  !text.trim()
+) return;
 
   // 🔒 lock in the selected section
 window.activeSectionIndex = index;
@@ -655,12 +660,21 @@ function snap() {
 
 
 
-function selectSection(index) {
-  sectionIndex = Math.max(0, Math.min(sections.length - 1, index));
-  offset = -sectionIndex * ITEM_HEIGHT;
-  snap();
-}
+function selectSection(index, fire = false) {
 
+  sectionIndex = Math.max(
+    0,
+    Math.min(sections.length - 1, Number(index))
+  );
+
+  offset = -sectionIndex * ITEM_HEIGHT;
+
+  snap();
+
+  if (fire && sectionIndex !== 0) {
+    fireSectionChange();
+  }
+}
 
 
 
@@ -740,7 +754,7 @@ selectSection(0, false);
 })();
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 
 
@@ -824,8 +838,8 @@ tiles.forEach((tile, index) => {
   const current =
     tile.querySelector(".sentence").textContent.trim();
 
-  const expected =
-    sentences[index].trim();
+const expected =
+  (sentences[index] || "").trim();
 
   if (current === expected) {
     correct++;
