@@ -893,23 +893,30 @@ if (current.trim() === expected) {
      SUBMIT (NON-DESTRUCTIVE)
      =============================== */
 
-  submitBtn.addEventListener("click", () => {
-    const dataString = buildScoreString();
-    if (!dataString) {
-      alert("Start the game first.");
-      return;
-    }
+submitBtn.addEventListener("click", () => {
+  console.log("GAME OVER");
 
-    scoreboard.textContent = dataString;
-    scoreboard.style.display = "block";
+  const tiles = document.querySelectorAll(".tile");
 
-    if (scoreBtns) scoreBtns.style.display = "flex";
+  if (!tiles.length) {
+    alert("No game running.");
+    return;
+  }
 
-    document.querySelectorAll(".tile").forEach(t => {
-      t.style.pointerEvents = "none";
-    });
+  // Optional: still try to build score, but NEVER block game over
+  const dataString = buildScoreString?.() || "GAME OVER";
 
+  scoreboard.textContent = dataString;
+  scoreboard.style.display = "block";
+
+  if (scoreBtns) scoreBtns.style.display = "flex";
+
+  tiles.forEach(t => {
+    t.style.pointerEvents = "none";
   });
+
+  submitBtn.disabled = true;
+});
 
   /* ===============================
      DOWNLOAD / COPY
