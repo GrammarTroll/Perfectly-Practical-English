@@ -814,18 +814,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 function getSectionName() {
-  const index = window.activeSectionIndex || 0;
+  const index = window.activeSectionIndex;
 
-  if (
-    typeof sectionSource !== "undefined" &&
-    sectionSource[index - 1]
-  ) {
-    return sectionSource[index - 1].label;
-  }
+  if (!index || index === 0) return "Unknown Section";
 
-  return "Unknown Section";
-}
-  /* ===============================
+  return sectionSource?.[index - 1]?.label ?? "Unknown Section";
+}  /* ===============================
      CANONICAL SCORE STRING
      =============================== */
 
