@@ -908,18 +908,25 @@ if (!tiles.length) {
 scoreboard.textContent = dataString;
 
 // 🔥 HARD FORCE VISIBILITY (overrides any CSS edge cases)
-scoreboard.style.display = "block";
-scoreboard.style.visibility = "visible";
-scoreboard.style.opacity = "1";
-scoreboard.style.height = "auto";
+scoreboard.style.cssText = `
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  border-top: 2px solid #e2e8f0;
+  padding-top: 8px;
+  white-space: pre-line;
+  font-family: monospace;
+  font-size: 0.95rem;
+  color: #0f172a;
+`;
+if (scoreBtns) scoreBtns.style.display = "flex";
 
-  if (scoreBtns) scoreBtns.style.display = "flex";
+tiles.forEach(t => {
+  t.style.pointerEvents = "none";
+});
 
-  tiles.forEach(t => {
-    t.style.pointerEvents = "none";
-  });
-
-  submitBtn.disabled = true;
+submitBtn.disabled = true;
 });
 
   /* ===============================
