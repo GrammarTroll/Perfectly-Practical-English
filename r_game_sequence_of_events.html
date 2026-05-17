@@ -855,15 +855,15 @@ function buildScoreString() {
     return null;
   }
 
-  let correct = 0;
-  const total = tiles.length;
-
-  // Freeze correct answer order at submit time
+  // 🔥 FREEZE correct answer order AT SUBMIT TIME
   const correctOrder = window.activeSectionText
     .trim()
     .split("\n")
     .map(s => s.trim())
     .filter(Boolean);
+
+  let correct = 0;
+  const total = tiles.length;
 
   tiles.forEach((tile, i) => {
     const current = tile.querySelector(".sentence")?.textContent.trim();
