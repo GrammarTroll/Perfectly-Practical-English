@@ -412,7 +412,12 @@ async function buildGame() {
   container.innerHTML = "";
   selected = null;
 
-const raw = window.activeSectionText;
+const raw = window.activeSectionText || "";
+
+if (!raw.trim()) {
+  alert("Select a section first.");
+  return;
+}
 
   sentences = raw
     .trim()
@@ -434,6 +439,8 @@ shuffled.forEach(text => {
   `;
 
 div.style.pointerEvents = 'auto';
+div.style.background = "#e0f2fe";
+div.classList.remove("correct");
 
 
   div.addEventListener('click', () => handleTileClick(div));
@@ -464,10 +471,9 @@ function handleTileClick(tile) {
 const s1 = selected.querySelector('.sentence');
 const s2 = tile.querySelector('.sentence');
 
-const tmp = s1.textContent;
-s1.textContent = s2.textContent;
-s2.textContent = tmp;
-
+const tmp = s1.innerText;
+s1.innerText = s2.innerText;
+s2.innerText = tmp;
 
   selected.classList.remove('selected');
   selected = null;
@@ -762,9 +768,8 @@ selectSection(0, false);
 
 
 <script>
-(async function () {
+document.addEventListener("DOMContentLoaded", () => {
   'use strict';
-
   /* ===============================
      HARD GUARDS
      =============================== */
@@ -830,80 +835,35 @@ function getSectionName() {
 
   function buildScoreString() {
     const tiles = [...document.querySelectorAll(".tile")];
-    if (!tiles.length) return null; // REAL start condition
+    if (!tiles.length || !window.activeSectionText.trim()) {
+  return null;
+}
 
     let correct = 0;
     const total = tiles.length;
 
-function buildScoreString() {
+tiles.forEach((tile, index) => {
 
-  console.log("BUILD SCORE RUNNING");
-  console.log("sentences:", sentences);
+const sentenceEl = tile.querySelector(".sentence");
 
-  const tiles = [...document.querySelectorAll(".tile")];
+if (!sentenceEl) return;
 
-  console.log("tiles:", tiles);
+const current = sentenceEl.innerText.trim();
 
-  if (!tiles.length) {
-    console.warn("No tiles found.");
-    return null;
+const expected =
+  (sentences[index] || "").trim();
+
+  if (current === expected) {
+    correct++;
+
+    tile.classList.add("correct");
+
+    tile.style.background = "#bbf7d0";
+  } else {
+    tile.style.background = "#fecaca";
   }
+});
 
-  let correct = 0;
-  const total = tiles.length;
-
-  tiles.forEach((tile, index) => {
-
-    const sentenceEl = tile.querySelector(".sentence");
-
-    // Safety check
-    if (!sentenceEl) {
-      console.warn("Missing .sentence element:", tile);
-      return;
-    }
-
-    const current = sentenceEl.textContent.trim();
-
-    const expected =
-      (sentences[index] || "").trim();
-
-    console.log({
-      index,
-      current,
-      expected
-    });
-
-    if (current === expected) {
-
-      correct++;
-
-      tile.classList.add("correct");
-
-      tile.style.background = "#bbf7d0";
-
-    } else {
-
-      tile.style.background = "#fecaca";
-    }
-
-  });
-
-  const percent = Math.round((correct / total) * 100);
-
-  const result = [
-    getFilename(),
-    getSectionName(),
-    nameInput?.value.trim() || "",
-    idInput?.value.trim() || "",
-    intlTimestamp(),
-    `${correct}/${total}`,
-    `${percent}%`
-  ].join("|");
-
-  console.log("FINAL SCORE STRING:", result);
-
-  return result;
-}
     const percent = Math.round((correct / total) * 100);
 
     return [
@@ -953,8 +913,9 @@ function buildScoreString() {
 
   document.getElementById("copyScore")?.addEventListener("click", () => {
     if (!scoreboard.textContent) return;
-    navigator.clipboard.writeText(scoreboard.textContent);
-    alert("Score copied!");
+navigator.clipboard?.writeText(scoreboard.textContent)
+  .then(() => alert("Score copied!"))
+  .catch(() => alert("Clipboard blocked"));
   });
 
   document.getElementById("downloadTxt")?.addEventListener("click", () => {
@@ -1004,7 +965,7 @@ document.getElementById("downloadPng")?.addEventListener("click", async () => {
   }
 });
 
-})();
+});
 </script>
 
 
