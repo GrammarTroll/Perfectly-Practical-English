@@ -809,8 +809,11 @@ window.getSelectedSectionIndex = function () {
 window.selectSectionByIndex = function (index) {
   if (!index || index === 0) return;
 
-  // 🔥 FORCE section open
   const section = sections[index];
+
+  // 🔥 FIX: keep global state in sync
+  window.activeSectionIndex = index;
+  activeSectionText = section.text;
 
   window.dispatchEvent(new CustomEvent("sectionchange", {
     detail: {
@@ -820,8 +823,6 @@ window.selectSectionByIndex = function (index) {
     }
   }));
 };
-
-
 
 // 🔑 START ON PLACEHOLDER VISUALLY, BUT ALLOW SELECTION
 selectSection(0, false);
@@ -905,15 +906,14 @@ function buildScoreString() {
     let correct = 0;
     const total = tiles.length;
 
-    tiles.forEach(tile => {
-      if (
-        tile.classList.contains("correct") ||
-        tile.dataset.correct === "true" ||
-        tile.getAttribute("aria-correct") === "true"
-      ) {
-        correct++;
-      }
-    });
+tiles.forEach((tile, i) => {
+  const text = tile.querySelector(".sentence")?.textContent?.trim();
+  const original = sentences[i]?.trim();
+
+  if (text === original) {
+    correct++;
+  }
+});
 
     const percent = Math.round((correct / total) * 100);
 
