@@ -848,47 +848,48 @@ function getSectionName() {
      CANONICAL SCORE STRING
      =============================== */
 
-  function buildScoreString() {
-    const tiles = [...document.querySelectorAll(".tile")];
-    if (!tiles.length || !(window.activeSectionText || "").trim()) {
-  return null;
-}
+function buildScoreString() {
+  const tiles = [...document.querySelectorAll(".tile")];
 
-    let correct = 0;
-    const total = tiles.length;
-
-tiles.forEach((tile, index) => {
-
-const sentenceEl = tile.querySelector(".sentence");
-
-if (!sentenceEl) return;
-
-const current = sentenceEl.textContent.trim();
-
-const expected = (sentences[index] || "").trim();
-
-if (current.trim() === expected) {
-  correct++;
-  tile.classList.add("correct");
-  tile.style.background = "#bbf7d0";
-} else {
-  tile.style.background = "#fecaca";
-}
-});
-
-    const percent = Math.round((correct / total) * 100);
-
-    return [
-      getFilename(),
-      getSectionName(),
-      nameInput?.value.trim() || "",
-      idInput?.value.trim() || "",
-      intlTimestamp(),
-      `${correct}/${total}`,
-      `${percent}%`
-    ].join("|");
+  if (!tiles.length || !(window.activeSectionText || "").trim()) {
+    return null;
   }
 
+  let correct = 0;
+  const total = tiles.length;
+
+  // Freeze correct answer order at submit time
+  const correctOrder = window.activeSectionText
+    .trim()
+    .split("\n")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  tiles.forEach((tile, i) => {
+    const current = tile.querySelector(".sentence")?.textContent.trim();
+    const expected = correctOrder[i];
+
+    if (current === expected) {
+      correct++;
+      tile.classList.add("correct");
+      tile.style.background = "#bbf7d0";
+    } else {
+      tile.style.background = "#fecaca";
+    }
+  });
+
+  const percent = Math.round((correct / total) * 100);
+
+  return [
+    getFilename(),
+    getSectionName(),
+    nameInput?.value.trim() || "",
+    idInput?.value.trim() || "",
+    intlTimestamp(),
+    `${correct}/${total}`,
+    `${percent}%`
+  ].join("|");
+}
   /* ===============================
      SUBMIT (NON-DESTRUCTIVE)
      =============================== */
