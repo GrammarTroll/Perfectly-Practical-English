@@ -1696,7 +1696,7 @@ const supabaseClient = createClient(  'https://etwwriloppklhhkmswpr.supabase.co'
 
 console.log("✅ Supabase initialized:", supabaseClient);
 
-let lastUploadedHash = null;
+if (cleaned === lastUploadedHash)
 
 window.saveResult = async function saveResult(text) {
 
@@ -1727,12 +1727,12 @@ if (!supabaseClient || typeof supabaseClient.from !== "function") {
     return;
   }
 
-  if (cleaned === lastUploadedScore) {
-    console.log("⚠️ Duplicate blocked");
-    return;
-  }
+if (cleaned === lastUploadedHash) {
+  console.log("⚠️ Duplicate blocked");
+  return;
+}
 
-  lastUploadedScore = cleaned;
+lastUploadedHash = cleaned;
 
   console.log("📤 INSERTING INTO scoreboard_raw:", cleaned);
 
@@ -1745,7 +1745,7 @@ const { data, error } = await supabaseClient
 
 if (error) {
   console.error("❌ SUPABASE INSERT FAILED");
-  console.error("Status:", status, statusText);
+  console.error("Insert failed (see Supabase error above)");
   console.error("Error message:", error.message);
   console.error("Error details:", error.details);
   console.error("Error hint:", error.hint);
