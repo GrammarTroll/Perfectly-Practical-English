@@ -314,7 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
   startBtn.addEventListener("click", () => {
     const index = window.getSelectedSectionIndex?.();
 
-    if (!index || Number(index) === 0) {
+    if (index == null || Number(index) === 0) {
       alert("Select a topic first.");
       return;
     }
@@ -328,7 +328,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.selectSectionByIndex(index);
   });
 });
-
 
 </script>
 
