@@ -1759,9 +1759,11 @@ const idInput = document.getElementById("scrambleId");
   if (startBtn && nameInput && idInput) {
 
     function updateStartState() {
-      const hasSection =
-        typeof window.SCRAMBLE_INDEX === "number" &&
-        window.SCRAMBLE_INDEX >= 0;
+document.addEventListener("DOMContentLoaded", () => {
+  if (Array.isArray(window.SCRAMBLE_SECTIONS) && window.SCRAMBLE_SECTIONS.length) {
+    window.setScrambleSection(0);
+  }
+});
 
       const hasName = nameInput.value.trim().length > 0;
       const hasId = idInput.value.trim().length > 0;
@@ -1775,8 +1777,18 @@ const idInput = document.getElementById("scrambleId");
     // wrap existing selector
 // wrap existing selector
 const originalSet = window.setScrambleSection;
+
 window.setScrambleSection = function (index) {
-  originalSet(index);
+  if (typeof originalSet === "function") {
+    originalSet(index);
+  }
+
+  if (Array.isArray(window.SCRAMBLE_SECTIONS)) {
+    window.SCRAMBLE_INDEX = index;
+  }
+
+  updateStartState();
+};  originalSet(index);
   updateStartState();
 };
 
@@ -2252,145 +2264,6 @@ restartBtn.addEventListener('click', () => {
   startBtn.click();
 });
 </script>
-
-<script>
-  window.OVERLAY_ENABLED = false;
-
-  (function(){
-    if (window.OVERLAY_ENABLED === true) return; // <<< stops the overlay from running
-
-    /* =========================================
-       1. RAW TEXT BLOCK — organized by team
-       ========================================= */
-
-    const rawText = (function(){/*
-    ~Team A List~
-    |Team A|11Phapmuan|12Piyanun|13Chinpasut|15Theetat|17Pasit/Patit|
-    |Team A|11Piyawarin|12Thanatphat|13Warawat|15Thanakorn|17Ronnakrit|
-    |Team A|11Thanisorn|12Papon|13Supasan|15Nunthapat|17Thanatthat|
-    |Team A|11Nanon|12Phunakorn|13Kuariwin|15Noppathorn|17Korrerk|
-    |Team A|11Chayakarn|12Sukhaphat|13Patawee|15Krittaphat|17Pothsawee|
-    |Team A|11Arichai|12Athiwat|13Kawinpob|15Pudh|17Korapat|
-    |Team A|11Withawich|12Teerapich|13Chinnawat|15Tanaphat|17Pakorn|
-    |Team A|11Theeraphat|12Akkhardwin|13Phattadon|15Nop|17Tashtada|
-
-    ~Team B List~
-    |Team B|11KornKamol|12Achiravit|13Pavee|15Pitchayapoom|17Denthanat|
-    |Team B|11Karn/Atis|12Puttipat|13Tanaphon|15Pannathorn|17Phurithat|
-    |Team B|11Songsathit|12Wongsapat|13Nathavee|15Thanadech|17Sanant|
-    |Team B|11Prachaya|12Supatat|13Kantaphon|15Supakorn|17Theetat|
-    |Team B|11Thanapat|12Parnasarn|13Kittitee|15Nuttapong|17Kanoknat|
-    |Team B|11Puripat|12Akrit|13Phuthaninphat|15Aritouch|17Krittitee|
-    |Team B|11Papeem|12Techin|13Phupa|15Mangkorn|17Kanapos|
-    */}).toString()
-    .replace(/^[^\/]+\/\*!?/, '')
-    .replace(/\*\/[^\/]+$/, '')
-    .trim();
-
-
-    /* =========================================
-       2. Parse teams
-       ========================================= */
-
-    const teamA = [];
-    const teamB = [];
-    let currentTeam = null;
-
-    rawText.split(/\r?\n/).forEach(line => {
-      line = line.trim();
-      if (!line) return;
-
-      if (/~Team A List~/i.test(line)) currentTeam = "A";
-      else if (/~Team B List~/i.test(line)) currentTeam = "B";
-      else if (currentTeam === "A") teamA.push(line.replace(/\//g,"•"));
-      else if (currentTeam === "B") teamB.push(line.replace(/\//g,"•"));
-    });
-
-    const allLines = teamA.concat(teamB);
-
-
-    /* =========================================
-       3. OVERLAY EXCLUSION CONFIG
-       ========================================= */
-
-    const RAW_EXCLUDED_DIVS = `
-    <div id="dynamicInputsReadingSpeaking">
-    <div id="instructionsContainerReadingSpeaking">
-    <div id="dynamicInputsWritingSpeaking">
-    <div id="instructionsContainerWritingSpeaking">
-    <div id="outputContainerReadingSpeaking">
-    <div id="outputContainerWritingSpeaking">
-    `;
-
-    const OVERLAY_EXCLUSIONS = [
-      ...RAW_EXCLUDED_DIVS.matchAll(/id="([^"]+)"/g)
-    ].map(m => `#${m[1]}`);
-
-
-    /* =========================================
-       4. Overlay engine
-       ========================================= */
-
-    const numberPattern = /^(?:Question\s*)?\d+[\.\)\:\-]/i;
-
-    function isExcluded(el) {
-      if (OVERLAY_EXCLUSIONS.some(sel => el.closest(sel))) return true;
-      if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return true;
-      return false;
-    }
-
-    function createOverlay(numberEl, line) {
-      if (numberEl.dataset.overlayApplied) return;
-
-      const overlayDiv = document.createElement("div");
-      overlayDiv.style.fontSize = "10px";
-      overlayDiv.style.lineHeight = "10px";
-      overlayDiv.style.color = "#1976d2";
-      overlayDiv.style.fontWeight = "bold";
-      overlayDiv.style.pointerEvents = "none";
-      overlayDiv.style.marginBottom = "2px";
-      overlayDiv.textContent = line;
-
-      numberEl.parentNode.insertBefore(overlayDiv, numberEl);
-      numberEl.dataset.overlayApplied = "1";
-    }
-
-    function scanAndAssignOverlays() {
-      const numberEls = [];
-
-      document.querySelectorAll("body *").forEach(el => {
-        if (isExcluded(el)) return;
-        if (el.childElementCount !== 0) return;
-
-        const text = el.textContent.trim();
-        if (!numberPattern.test(text)) return;
-
-        numberEls.push(el);
-      });
-
-      numberEls.forEach((el, index) => {
-        const line =
-          (teamA.length && teamB.length)
-            ? (index % 2 === 0
-                ? teamA[Math.floor(Math.random() * teamA.length)]
-                : teamB[Math.floor(Math.random() * teamB.length)])
-            : allLines[Math.floor(Math.random() * allLines.length)];
-
-        createOverlay(el, line);
-      });
-    }
-
-
-    /* =========================================
-       5. Run
-       ========================================= */
-
-    scanAndAssignOverlays();
-    setInterval(scanAndAssignOverlays, 700);
-
-  })();
-</script>
-
 
 <script>
 
