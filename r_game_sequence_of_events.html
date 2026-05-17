@@ -747,8 +747,11 @@ window.selectSectionByIndex = function (index) {
 
   if (index <= 0 || !sections[index]) return;
 
-  // 🔥 FORCE section open
   const section = sections[index];
+
+  // 🔥 CRITICAL: set globals immediately (THIS IS WHAT WAS MISSING)
+  window.activeSectionIndex = index;
+  window.activeSectionText = section.text;
 
   window.dispatchEvent(new CustomEvent("sectionchange", {
     detail: {
@@ -758,8 +761,6 @@ window.selectSectionByIndex = function (index) {
     }
   }));
 };
-
-
 // 🔑 START ON PLACEHOLDER VISUALLY, BUT ALLOW SELECTION
 selectSection(0, false);
 
