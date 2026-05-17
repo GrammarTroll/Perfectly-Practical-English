@@ -1835,8 +1835,12 @@ let scrambleQuestions = [];
 
 (() => {
   // ✅ Resolve raw text (no async needed)
+const scrambleContainer = document.getElementById('scrambleContainer');
+let scrambleQuestions = [];
+
+// CLEAN START
+(() => {
   const raw = scrambleQuestionsSource;
-(function () {
 
 window.renderScrambleFromSection = function (text) {
   scrambleContainer.innerHTML = "";
@@ -1940,20 +1944,24 @@ window.addEventListener("scramble:sectionchange", (e) => {
 
 
 
-  // ✅ Enable submit AFTER render (inline version)
-  const nameInput = document.getElementById('scrambleName');
-  const idInput = document.getElementById('scrambleId');
-  const submitBtn = document.getElementById('scrambleSubmitBtn');
+// ===============================
+// ENABLE SUBMIT AFTER RENDER
+// ===============================
 
-  function checkEnableSubmit() {
-    submitBtn.disabled = !(nameInput.value.trim() && idInput.value.trim());
-  }
-  nameInput.addEventListener('input', checkEnableSubmit);
-  idInput.addEventListener('input', checkEnableSubmit);
-  checkEnableSubmit(); // initialize state
-})();
+const nameInput = document.getElementById('scrambleName');
+const idInput = document.getElementById('scrambleId');
+const submitBtn = document.getElementById('scrambleSubmitBtn');
 
-// ---------------------- SUBMIT ----------------------
+function checkEnableSubmit() {
+  submitBtn.disabled = !(nameInput.value.trim() && idInput.value.trim());
+}
+
+nameInput.addEventListener('input', checkEnableSubmit);
+idInput.addEventListener('input', checkEnableSubmit);
+
+checkEnableSubmit();
+
+// initialize state// ---------------------- SUBMIT ----------------------
 document.getElementById('scrambleSubmitBtn').addEventListener('click', async () => {
   const filename = window.location.pathname.split('/').pop();
   const nm = document.getElementById('scrambleName').value.trim();
@@ -2001,7 +2009,7 @@ if (typeof window.saveResult === "function") {
   window.saveResult(scoreText);
 } else {
   console.error("saveResult not ready");
-}});
+});
 
 // Copy / download
 setupCopyDownload(
@@ -2954,7 +2962,7 @@ window.addEventListener("resize", adjustBodyPadding);
 let supabaseClient = null;
 let lastUploadedScore = null;
 
-window.addEventListener("DOMContentLoaded", () => {
+(function initSupabase() {
 
   if (!window.supabase) {
     console.error("❌ Supabase library not loaded");
@@ -3009,35 +3017,36 @@ window.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-    if (cleaned === lastUploadedScore) {
-      console.log("⚠️ Duplicate blocked");
-      return;
+      if (cleaned === lastUploadedScore) {
+        console.log("⚠️ Duplicate blocked");
+        return;
+      }
+
+      lastUploadedScore = cleaned;
+
+      console.log("📤 INSERTING INTO scoreboard_raw:", cleaned);
+
+      const { data, error } = await supabaseClient
+        .from("scoreboard_raw")
+        .insert([
+          { result_text: cleaned }
+        ])
+        .select();
+
+      if (error) {
+        console.error("❌ INSERT FAILED FULL ERROR:", error);
+        return;
+      }
+
+      console.log("✅ INSERT SUCCESS:", data);
+
+    } catch (err) {
+      console.error("❌ saveResult crashed:", err);
     }
+  };
 
-    lastUploadedScore = cleaned;
-
-    console.log("📤 INSERTING INTO scoreboard_raw:", cleaned);
-
-    const { data, error } = await supabaseClient
-      .from("scoreboard_raw")
-      .insert([
-        { result_text: cleaned }
-      ])
-      .select();
-
-    if (error) {
-      console.error("❌ INSERT FAILED FULL ERROR:", error);
-      return;
-    }
-
-    console.log("✅ INSERT SUCCESS:", data);
-
-  } catch (err) {
-    console.error("❌ saveResult crashed:", err);
-  }
-};
+})(); 
 </script>
-
 
 </body>
 </html>
