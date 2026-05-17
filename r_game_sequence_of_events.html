@@ -1279,6 +1279,51 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
+<script>
+(function () {
+
+  const scoreboard = document.getElementById("scoreboard");
+  const submitBtn = document.getElementById("submitBtn");
+
+  if (!scoreboard || !submitBtn) {
+    console.warn("FORCE SCOREBOARD: missing elements");
+    return;
+  }
+
+  // FORCE visible styling
+  Object.assign(scoreboard.style, {
+    display: "block",
+    visibility: "visible",
+    opacity: "1",
+    minHeight: "40px",
+    border: "2px solid red",
+    padding: "10px",
+    marginTop: "10px",
+    background: "#fff",
+    color: "#000",
+    whiteSpace: "pre-wrap",
+    position: "relative",
+    zIndex: "99999"
+  });
+
+  submitBtn.addEventListener("click", () => {
+
+    setTimeout(() => {
+
+      scoreboard.textContent =
+        "TEST SCOREBOARD WORKING";
+
+      scoreboard.style.display = "block";
+
+      console.log("FORCED SCOREBOARD SUCCESS");
+
+    }, 50);
+
+  });
+
+})();
+</script>
+
 </body>
 </html>
 
