@@ -796,13 +796,18 @@ selectSection(0, false);
     );
   }
 
-  function getSectionName() {
-return window.activeSectionText
-  ? window.activeSectionText.split("\n")[0].trim()
-      : document.querySelector("section h3")?.textContent.trim()
-      || "Unknown Section";
+function getSectionName() {
+  const index = window.activeSectionIndex || 0;
+
+  if (
+    typeof sectionSource !== "undefined" &&
+    sectionSource[index - 1]
+  ) {
+    return sectionSource[index - 1].label;
   }
 
+  return "Unknown Section";
+}
   /* ===============================
      CANONICAL SCORE STRING
      =============================== */
