@@ -34,7 +34,7 @@ button {
   font-size: 12px;
   line-height: 1;
 
-  background: 2b5d84;
+  background: #2b5d84;
   color: #444;
 
   border: none;
@@ -234,7 +234,8 @@ button:disabled { background:#888; cursor:not-allowed; }
   top: 0;
   left: 0;
   width: 100%;
-  height: auto;
+  display: flex;
+  flex-direction: column;
   will-change: transform;
 }
 
@@ -297,7 +298,7 @@ button:disabled { background:#888; cursor:not-allowed; }
     text-align: left;
     font-size: 10px;
     color: #666;
-    background: #none;
+    background: none;
     border-radius: 6px;
   }
 
@@ -958,7 +959,6 @@ function parseSections(raw) {
 
 const rawText = document.getElementById('rawTextInput').value;
 const sections = parseSections(rawText);
-const wheel = document.querySelector('#sectionWheelContainer .wheel');
 
 /* 👇 PUT FIX #5 RIGHT HERE 👇 */
 
@@ -966,62 +966,80 @@ let currentSectionIndex = -1; // placeholder state
 
 let gameStarted = false;
 
-
-const sectionUp = document.getElementById('sectionUp');
-const sectionDown = document.getElementById('sectionDown');
-
-
-sectionUp.addEventListener('click', () => {
-  if (gameStarted) saveAnswer();
-
-  if (currentSectionIndex === -1) {
-    currentSectionIndex = sections.length - 1;
-  } else {
-    currentSectionIndex =
-      (currentSectionIndex - 1 + sections.length) % sections.length;
-  }
-
-  renderSectionWheel();
-});
-
-sectionDown.addEventListener('click', () => {
-  if (gameStarted) saveAnswer();
-
-  if (currentSectionIndex === -1) {
-    currentSectionIndex = 0;
-  } else {
-    currentSectionIndex =
-      (currentSectionIndex + 1) % sections.length;
-  }
-
-  renderSectionWheel();
-});
+const wheel = document.querySelector('#sectionWheelContainer .wheel');
 
 function renderSectionWheel() {
   wheel.innerHTML = '';
 
-  // placeholder row
-  const placeholder = document.createElement('div');
-  placeholder.className =
-    'wheel-item' + (currentSectionIndex === -1 ? ' selected' : '');
-  placeholder.textContent = 'Select a topic.';
-  wheel.appendChild(placeholder);
+  // 🔹 Placeholder state
+  if (currentSectionIndex === -1) {
+    const div = document.createElement('div');
+    div.className = 'wheel-item selected';
+    div.textContent = 'Select a category.';
+    wheel.appendChild(div);
+    wheel.style.transform = 'translateY(0)';
+    return;
+  }
 
-  // section titles
+function activateSelectedSection() {
+  if (currentSectionIndex === -1) return;
+
+  currentIndex = 0;
+
+  dropContainer.innerHTML = '';
+  conveyor.innerHTML = '';
+  conveyorItems = [];
+  scrollPos = 0;
+
+  renderCurrent();
+}
+
+
+  // 🔹 Normal section list
   sections.forEach((sec, i) => {
     const div = document.createElement('div');
-    div.className =
-      'wheel-item' + (i === currentSectionIndex ? ' selected' : '');
+    div.className = 'wheel-item' + (i === currentSectionIndex ? ' selected' : '');
     div.textContent = sec.title;
     wheel.appendChild(div);
   });
 
-  // scroll so selected row is centered
-  wheel.style.transform =
-    `translateY(${-(currentSectionIndex + 1) * 36}px)`;
+  wheel.style.transform = `translateY(${-currentSectionIndex * 36}px)`;
 }
 
+const sectionUp = document.getElementById('sectionUp');
+const sectionDown = document.getElementById('sectionDown');
 
+sectionUp.addEventListener('click', () => {
+  saveAnswer();
+
+  if (currentSectionIndex === -1) {
+    currentSectionIndex = sections.length - 1;
+  } else {
+    currentSectionIndex--;
+    if (currentSectionIndex < 0) {
+      currentSectionIndex = sections.length - 1;
+    }
+  }
+
+  renderSectionWheel();
+  activateSelectedSection(); // 🔑 THIS LINE WAS MISSING
+});
+
+sectionDown.addEventListener('click', () => {
+  saveAnswer();
+
+  if (currentSectionIndex === -1) {
+    currentSectionIndex = 0;
+  } else {
+    currentSectionIndex++;
+    if (currentSectionIndex >= sections.length) {
+      currentSectionIndex = 0;
+    }
+  }
+
+  renderSectionWheel();
+  activateSelectedSection(); // 🔑 THIS LINE WAS MISSING
+});
 
 
 
@@ -1248,10 +1266,10 @@ sec.lines.forEach((line, lIdx) => {
   const resultText = `${filename}|${name}|${id}|${dateString}|${correctCount}/${total}|${percentage}%`;
 
   // --- Show on scoreboard ---
-scoreData.textContent = resultText;
+  scoreData.textContent = resultText;
 scoreboard.style.display = 'block';
-
-window.saveResult(resultText);
+saveResult(resultText);
+});
 
 copyButton.addEventListener('click', ()=>{ navigator.clipboard.writeText(scoreData.textContent).then(()=>alert('Copied to clipboard')); });
 downloadTxtButton.addEventListener('click', ()=>{
@@ -1316,101 +1334,6 @@ document.body.appendChild(borderDiv);
 
 
 <script>
-(function () {
-  /* -----------------------------
-     Inject CSS
-     ----------------------------- */
-  const style = document.createElement('style');
-  style.textContent = `
-    #skylineBackdrop {
-      position: absolute;
-      left: 0;
-      width: 100vw;
-      pointer-events: none;
-      z-index: 0;
-      display: flex;
-      align-items: flex-end;
-      overflow: hidden;
-    }
-
-    .skyline-building {
-      align-self: flex-end;
-    }
-
-    body > *:not(#skylineBackdrop) {
-      position: relative;
-      z-index: 1;
-    }
-  `;
-  document.head.appendChild(style);
-
-  /* -----------------------------
-     Create container
-     ----------------------------- */
-  const skyline = document.createElement('div');
-  skyline.id = 'skylineBackdrop';
-  document.body.appendChild(skyline);
-
-  /* -----------------------------
-     Position skyline
-     ----------------------------- */
-  function positionSkyline() {
-    const dropBand = document.getElementById('dropBand');
-    if (!dropBand) return;
-
-    const rect = dropBand.getBoundingClientRect();
-
-const viewportHeight = window.innerHeight;
-const baseline = viewportHeight - rect.top;
-
-skyline.style.bottom = `${baseline + 20}px`; // ⬆ move buildings up 50px
-
-    skyline.style.height = '120px';           // ⬇ slightly shorter overall
-  }
-
-  /* -----------------------------
-     Build skyline
-     ----------------------------- */
-  function buildSkyline() {
-    skyline.innerHTML = '';
-
-    const screenWidth = window.innerWidth;
-    let usedWidth = 0;
-
-    while (usedWidth < screenWidth) {
-      const building = document.createElement('div');
-
-const width = 6 + Math.random() * 10; // ⬅ wider buildings
-      const height = 20 + Math.random() * 90;  // shorter buildings
-      const shade = 175 + Math.floor(Math.random() * 50);
-
-      building.className = 'skyline-building';
-      building.style.width = width + 'px';
-      building.style.height = height + 'px';
-      building.style.backgroundColor =
-        `rgb(${shade},${shade},${shade})`;
-
-      skyline.appendChild(building);
-      usedWidth += width;
-    }
-  }
-
-  /* -----------------------------
-     Init
-     ----------------------------- */
-  function initSkyline() {
-    positionSkyline();
-    buildSkyline();
-  }
-
-  window.addEventListener('resize', initSkyline);
-  setTimeout(initSkyline, 0);
-})();
-
-
-</script>
-
-<script>
 document.addEventListener("DOMContentLoaded", function () {
 
     // Get filename only
@@ -1434,6 +1357,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+
 <script>
 
 (function(){
@@ -1446,7 +1370,7 @@ const RAW_TEXT = `
 
 How to play...
 
-1. Enter Name and ID
+1. Enter Name and ID.
 2. Select a category.
 3. Click Start to begin.
 4. Grab words as they go by.
@@ -1675,8 +1599,50 @@ document.addEventListener("keydown", e=>{
   if(e.key==="Escape") closeModal();
 });
 
-})();
+/* =========================
+   DYNAMIC BODY PADDING FOR BUTTON
+========================= */
 
+function adjustBodyPadding(){
+  const btnHeight = btn.offsetHeight + -25; // include some gap
+  document.body.style.paddingBottom = `${btnHeight}px`;
+}
+
+// Initial adjustment
+adjustBodyPadding();
+
+// Update if window is resized (responsive)
+window.addEventListener("resize", adjustBodyPadding);
+
+})();
+</script>
+
+<script>
+(function() {
+  // Prevent pinch-to-zoom
+  function preventPinch(e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }
+
+  // Prevent double-tap zoom
+  let lastTouchTime = 0;
+  function preventDoubleTap(e) {
+    const now = Date.now();
+    if (now - lastTouchTime < 300) {
+      e.preventDefault();
+    }
+    lastTouchTime = now;
+  }
+
+  // Block gesture events on iOS
+  function preventGesture(e) {
+    e.preventDefault();
+  }
+
+  document.addEventListener('touchstart', preventPinch, { passive: false });
+  document.addEventListener('touchend', preventDoubleTap, { passive: false });
+  document.addEventListener('gesturestart', preventGesture, { passive: false });
+})();
 </script>
 
 <!-- SUPABASE LIBRARY -->
@@ -1750,7 +1716,11 @@ window.saveResult = async function saveResult(text) {
 
 </script>
 
-
 </body>
 </html>
+
+
+
+
+
 
