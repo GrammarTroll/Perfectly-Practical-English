@@ -306,8 +306,8 @@
 window.activeSectionText = "";
 window.activeSectionIndex = 0;
 </script>
-
 <script>
+
 document.addEventListener("DOMContentLoaded", () => {
   const startBtn = document.getElementById("startBtn");
 
@@ -315,32 +315,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const index = window.getSelectedSectionIndex?.();
 
-    if (!index || Number(index) === 0) {
+    if (index == null || Number(index) === 0) {
       alert("Select a topic first.");
       return;
     }
 
-    // ✅ ONLY use wheel system (single source of truth)
-    const text = window.getSelectedSectionText?.();
+    // 🔥 Get real section data directly (NO event system)
+    const section = sectionSource?.[index - 1];
 
-    if (!text || !text.trim()) {
+    if (!section || !section.text) {
       alert("Section not found.");
       return;
     }
 
     // 🔥 FORCE STATE
     window.activeSectionIndex = index;
-    window.activeSectionText = text;
+    window.activeSectionText = section.text;
 
-    // 🔥 BUILD GAME
+    // 🔥 BUILD GAME DIRECTLY (bypasses broken pipeline)
     if (typeof buildGame === "function") {
       buildGame();
     } else {
       alert("Game not ready yet. Refresh the page.");
     }
   });
-});
-</script>
+});</script>
 
 <script>
 
@@ -852,13 +851,13 @@ function getSectionName() {
 function buildScoreString() {
   const tiles = [...document.querySelectorAll(".tile")];
 
-  if (!tiles.length || !(window.activeSectionText || "").trim()) {
-    return null;
-  }
+  if (!tiles.length) return null;
 
-  // 🔥 FREEZE correct answer order AT SUBMIT TIME
-  const correctOrder = window.activeSectionText
-    .trim()
+  const raw = window.activeSectionText;
+
+  if (!raw) return "GAME OVER";
+
+  const correctOrder = raw
     .split("\n")
     .map(s => s.trim())
     .filter(Boolean);
@@ -879,7 +878,7 @@ function buildScoreString() {
     }
   });
 
-  const percent = Math.round((correct / total) * 100);
+  const percent = total ? Math.round((correct / total) * 100) : 0;
 
   return [
     getFilename(),
