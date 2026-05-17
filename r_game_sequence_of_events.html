@@ -475,20 +475,8 @@ function shuffle(arr) {
 
 
 // ✅ Submit
-document.getElementById('submitBtn')?.addEventListener('click', () => {
-  const out = buildScoreString();
-  document.getElementById('scoreboard').textContent = out;
-  document.getElementById('scoreboard').style.display = 'block';
-
-  document.getElementById('submitBtn')?.setAttribute('disabled', 'disabled');
-
-container.querySelectorAll('.tile').forEach(t => {
-  t.style.pointerEvents = 'none';
-
-});
-
-});
-
+// ✅ Submit
+// handled by scoreboard module below
 // 📋 Copy
 document.getElementById('copyScore')?.addEventListener('click', () => {
   if (!scoreboard.textContent) return;
