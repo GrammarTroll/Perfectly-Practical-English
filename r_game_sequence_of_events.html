@@ -308,15 +308,19 @@ window.activeSectionIndex = 0;
 </script>
 <script>
 
-document.getElementById("startBtn").addEventListener("click", () => {
-  const index = window.getSelectedSectionIndex();
+document.addEventListener("DOMContentLoaded", () => {
+  const startBtn = document.getElementById("startBtn");
 
-if (index == null || Number(index) === 0) {
-  alert("Select a topic first.");
-  return;
-}
+  startBtn.addEventListener("click", () => {
+    const index = window.getSelectedSectionIndex();
 
-  window.selectSectionByIndex(index);
+    if (index == null || Number(index) === 0) {
+      alert("Select a topic first.");
+      return;
+    }
+
+    window.selectSectionByIndex(index);
+  });
 });
 
 
