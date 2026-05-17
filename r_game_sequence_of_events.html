@@ -540,7 +540,7 @@ sections = [
 
 
   /* ---------- BUILD UI ---------- */
-  const container = document.getElementById("sectionWheelContainer");
+  const wheelContainer = document.getElementById("sectionWheelContainer");
 
 
 // ▲ / ▼ BUTTONS
@@ -554,7 +554,7 @@ btnUp.addEventListener("click", () => {
 btnDown.addEventListener("click", () => {
   selectSection(sectionIndex + 1, true);
 });
-  container.style.cssText = `
+  wheelContainer.style.cssText = `
     position: relative;
     height: ${ITEM_HEIGHT}px;
     overflow: hidden;
@@ -600,7 +600,7 @@ item.addEventListener("click", () => {
     wheel.appendChild(item);
   });
 
-  container.appendChild(wheel);
+  wheelContainer.appendChild(wheel);
 
 
 
@@ -685,15 +685,15 @@ function selectSection(index) {
     snap(true);
   }
 
-  container.addEventListener("mousedown", e => start(e.clientY));
+  wheelContainer.addEventListener("mousedown", e => start(e.clientY));
   window.addEventListener("mousemove", e => move(e.clientY));
   window.addEventListener("mouseup", end);
 
-  container.addEventListener("touchstart", e => start(e.touches[0].clientY), { passive: true });
-  container.addEventListener("touchmove", e => move(e.touches[0].clientY), { passive: true });
-  container.addEventListener("touchend", end);
+  wheelContainer.addEventListener("touchstart", e => start(e.touches[0].clientY), { passive: true });
+  wheelContainer.addEventListener("touchmove", e => move(e.touches[0].clientY), { passive: true });
+  wheelContainer.addEventListener("touchend", end);
 
-container.addEventListener("wheel", e => {
+wheelContainer.addEventListener("wheel", e => {
   e.preventDefault();
 
   if (e.deltaY > 0) {
