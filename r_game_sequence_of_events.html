@@ -306,8 +306,8 @@
 window.activeSectionText = "";
 window.activeSectionIndex = 0;
 </script>
-<script>
 
+<script>
 document.addEventListener("DOMContentLoaded", () => {
   const startBtn = document.getElementById("startBtn");
 
@@ -315,31 +315,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const index = window.getSelectedSectionIndex?.();
 
-    if (index == null || Number(index) === 0) {
+    if (!index || Number(index) === 0) {
       alert("Select a topic first.");
       return;
     }
 
-    // 🔥 Get real section data directly (NO event system)
-    const section = sectionSource?.[index - 1];
+    // ✅ ONLY use wheel system (single source of truth)
+    const text = window.getSelectedSectionText?.();
 
-    if (!section || !section.text) {
+    if (!text || !text.trim()) {
       alert("Section not found.");
       return;
     }
 
     // 🔥 FORCE STATE
     window.activeSectionIndex = index;
-    window.activeSectionText = section.text;
+    window.activeSectionText = text;
 
-    // 🔥 BUILD GAME DIRECTLY (bypasses broken pipeline)
+    // 🔥 BUILD GAME
     if (typeof buildGame === "function") {
       buildGame();
     } else {
       alert("Game not ready yet. Refresh the page.");
     }
   });
-});</script>
+});
+</script>
 
 <script>
 
