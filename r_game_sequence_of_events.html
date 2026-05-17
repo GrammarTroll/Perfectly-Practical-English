@@ -326,8 +326,9 @@ const playerIdInput =
 const scoreboard =
   document.getElementById('scrambleScoreOutput') ||
   document.getElementById('scoreboard');
-window.activeSectionText = "";
 
+window.activeSectionText = "";
+let activeSectionIndex = 0;
 </script>
 <script>
 
@@ -414,7 +415,7 @@ window.addEventListener("sectionchange", async (e) => {
   if (!index || index === 0 || !text || !text.trim()) return;
 
   // 🔒 lock in the selected section
-  activeSectionIndex = index;
+  window.activeSectionIndex = index;
   activeSectionText  = text;
 
   buildGame();
