@@ -873,7 +873,6 @@ selectSection(0, false);
       t.style.pointerEvents = "none";
     });
 
-    requestAnimationFrame(() => saveToSupabase(dataString));
   });
 
   /* ===============================
@@ -940,45 +939,6 @@ document.getElementById("downloadPng")?.addEventListener("click", async () => {
     wrapper.remove();
   }
 });
-
-
-
-  /* ===============================
-     SUPABASE (PARSED STRING)
-     =============================== */
-
-  if (!window.supabase) {
-    console.warn("⚠️ Supabase not loaded (skipping save)");
-    return;
-  }
-
-  const supabase = window.supabase.createClient(
-    "https://rhmbuqwbjacvbobxmyvx.supabase.co",
-    "YOUR_PUBLIC_ANON_KEY"
-  );
-
-  async function saveToSupabase(dataString) {
-    const parts = dataString.split("|");
-    if (parts.length !== 7) return;
-
-    const [file, section, name, id, date, scorePart, percent] = parts;
-    const [correct, total] = scorePart.split("/").map(Number);
-
-    const row = {
-      filename: file,
-      section,
-      student_name: name || null,
-      student_id: id || null,
-      score: correct,
-      total,
-      percentage_correct: Number(percent.replace("%", "")),
-      raw_string: dataString,
-      created_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase.from("student_scores").insert([row]);
-    if (error) console.error("❌ Supabase insert failed:", error);
-  }
 
 })();
 </script>
