@@ -454,8 +454,11 @@ div.style.pointerEvents = 'auto';
   container.appendChild(div);
 });
 
-  document.getElementById('scrambleSubmitBtn').disabled = false;
-  document.getElementById('scrambleScoreboard').style.display = 'none';
+const submitBtn = document.getElementById('submitBtn');
+const scoreboard = document.getElementById('scoreboard');
+
+if (submitBtn) submitBtn.disabled = false;
+if (scoreboard) scoreboard.style.display = 'none';
 }
 
 // 🔁 Click-to-swap
@@ -830,15 +833,24 @@ selectSection(0, false);
     let correct = 0;
     const total = tiles.length;
 
-    tiles.forEach(tile => {
-      if (
-        tile.classList.contains("correct") ||
-        tile.dataset.correct === "true" ||
-        tile.getAttribute("aria-correct") === "true"
-      ) {
-        correct++;
-      }
-    });
+tiles.forEach((tile, index) => {
+
+  const current =
+    tile.querySelector(".sentence").textContent.trim();
+
+  const expected =
+    sentences[index].trim();
+
+  if (current === expected) {
+    correct++;
+
+    tile.classList.add("correct");
+
+    tile.style.background = "#bbf7d0";
+  } else {
+    tile.style.background = "#fecaca";
+  }
+});
 
     const percent = Math.round((correct / total) * 100);
 
