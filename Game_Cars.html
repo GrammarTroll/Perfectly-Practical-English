@@ -1680,18 +1680,20 @@ document.addEventListener("keydown", e=>{
 </script>
 
 <!-- SUPABASE LIBRARY -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script>
 
-const supabaseClient = window.supabase?.createClient(
+if (!window.supabase) {
+  throw new Error("❌ Supabase library not loaded (window.supabase is missing)");
+}
+
+const supabaseClient = window.supabase.createClient(
   'https://etwwriloppklhhkmswpr.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
 );
 
-if (!supabaseClient) {
-  console.error("❌ Supabase failed to initialize");
-}
+console.log("✅ Supabase initialized:", supabaseClient);
 
 let lastUploadedScore = null;
 
@@ -1733,17 +1735,24 @@ window.saveResult = async function saveResult(text) {
 
   console.log("📤 INSERTING INTO scoreboard_raw:", cleaned);
 
-  const { data, error } = await supabaseClient
-    .from("scoreboard_raw")
-    .insert([
-      { result_text: cleaned }
-    ])
-    .select();
+const { data, error, status, statusText } = await supabaseClient
+  .from("scoreboard_raw")
+  .insert([
+    { result_text: cleaned }
+  ])
+  .select();
 
-  if (error) {
-    console.error("❌ INSERT FAILED FULL ERROR:", error);
-    return;
-  }
+if (error) {
+  console.error("❌ SUPABASE INSERT FAILED");
+  console.error("Status:", status, statusText);
+  console.error("Error message:", error.message);
+  console.error("Error details:", error.details);
+  console.error("Error hint:", error.hint);
+  console.error("Full error object:", error);
+  return;
+}
+
+console.log("✅ INSERT SUCCESS:", data);
 
   console.log("✅ INSERT SUCCESS:", data);
 };
