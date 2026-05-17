@@ -435,8 +435,7 @@ div.style.pointerEvents = 'auto';
   container.appendChild(div);
 });
 
-  document.getElementById('scrambleSubmitBtn').disabled = false;
-  document.getElementById('scrambleScoreboard').style.display = 'none';
+document.getElementById('submitBtn')?.disabled = false;  document.getElementById('scoreboard')?.style?.setProperty('display', 'none');
 }
 
 // 🔁 Click-to-swap
@@ -476,9 +475,9 @@ function shuffle(arr) {
 
 
 // ✅ Submit
-document.getElementById('scrambleSubmitBtn').addEventListener('click', () => {
+document.getElementById('submitBtn')?.addEventListener('click', () => {
   const out = getScoreOutput();
-  document.getElementById('scrambleScoreOutput').textContent = out;
+  document.getElementById('scoreboard').textContent = out;
   document.getElementById('scrambleScoreboard').style.display = 'block';
 
   document.getElementById('scrambleSubmitBtn').disabled = true;
