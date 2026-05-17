@@ -872,11 +872,20 @@ const expected =
      =============================== */
 
   submitBtn.addEventListener("click", () => {
-    const dataString = buildScoreString?.();
-    if (!dataString) {
-      alert("Start the game first.");
-      return;
-    }
+let dataString;
+
+try {
+  dataString = buildScoreString();
+} catch (err) {
+  console.error("buildScoreString crashed:", err);
+  alert("Score error (check console)");
+  return;
+}
+
+if (!dataString) {
+  alert("Start the game first.");
+  return;
+}
 
     scoreboard.textContent = dataString;
     scoreboard.style.display = "block";
