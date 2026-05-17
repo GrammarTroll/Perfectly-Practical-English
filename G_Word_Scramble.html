@@ -2964,10 +2964,11 @@ let lastUploadedScore = null;
 
 (function initSupabase() {
 
-  if (!window.supabase) {
-    console.error("❌ Supabase library not loaded");
-    return;
-  }
+if (!window.supabase || !window.supabase.createClient) {
+  console.warn("⏳ Supabase not ready yet — retrying...");
+  setTimeout(initSupabase, 300);
+  return;
+}
 
   try {
     supabaseClient = window.supabase.createClient(
