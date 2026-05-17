@@ -320,17 +320,26 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (typeof window.selectSectionByIndex !== "function") {
-      alert("Game not ready yet. Refresh the page.");
+    // 🔥 Get real section data directly (NO event system)
+    const section = sectionSource?.[index - 1];
+
+    if (!section || !section.text) {
+      alert("Section not found.");
       return;
     }
 
-    // 🔥 IMPORTANT: trigger real pipeline
-    window.selectSectionByIndex(index);
-    window.fireSelectedSection?.(); // <-- THIS was missing on GitHub
+    // 🔥 FORCE STATE
+    window.activeSectionIndex = index;
+    window.activeSectionText = section.text;
+
+    // 🔥 BUILD GAME DIRECTLY (bypasses broken pipeline)
+    if (typeof buildGame === "function") {
+      buildGame();
+    } else {
+      alert("Game not ready yet. Refresh the page.");
+    }
   });
-});
-</script>
+});</script>
 
 <script>
 
