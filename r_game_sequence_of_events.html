@@ -835,25 +835,75 @@ function getSectionName() {
     let correct = 0;
     const total = tiles.length;
 
-tiles.forEach((tile, index) => {
+function buildScoreString() {
 
-  const current =
-    tile.querySelector(".sentence").textContent.trim();
+  console.log("BUILD SCORE RUNNING");
+  console.log("sentences:", sentences);
 
-const expected =
-  (sentences[index] || "").trim();
+  const tiles = [...document.querySelectorAll(".tile")];
 
-  if (current === expected) {
-    correct++;
+  console.log("tiles:", tiles);
 
-    tile.classList.add("correct");
-
-    tile.style.background = "#bbf7d0";
-  } else {
-    tile.style.background = "#fecaca";
+  if (!tiles.length) {
+    console.warn("No tiles found.");
+    return null;
   }
-});
 
+  let correct = 0;
+  const total = tiles.length;
+
+  tiles.forEach((tile, index) => {
+
+    const sentenceEl = tile.querySelector(".sentence");
+
+    // Safety check
+    if (!sentenceEl) {
+      console.warn("Missing .sentence element:", tile);
+      return;
+    }
+
+    const current = sentenceEl.textContent.trim();
+
+    const expected =
+      (sentences[index] || "").trim();
+
+    console.log({
+      index,
+      current,
+      expected
+    });
+
+    if (current === expected) {
+
+      correct++;
+
+      tile.classList.add("correct");
+
+      tile.style.background = "#bbf7d0";
+
+    } else {
+
+      tile.style.background = "#fecaca";
+    }
+
+  });
+
+  const percent = Math.round((correct / total) * 100);
+
+  const result = [
+    getFilename(),
+    getSectionName(),
+    nameInput?.value.trim() || "",
+    idInput?.value.trim() || "",
+    intlTimestamp(),
+    `${correct}/${total}`,
+    `${percent}%`
+  ].join("|");
+
+  console.log("FINAL SCORE STRING:", result);
+
+  return result;
+}
     const percent = Math.round((correct / total) * 100);
 
     return [
