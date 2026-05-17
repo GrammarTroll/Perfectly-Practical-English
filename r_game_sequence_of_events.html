@@ -814,18 +814,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 function getSectionName() {
-  const index = window.activeSectionIndex;
+  const index = window.activeSectionIndex || 0;
 
-  if (!index || index === 0) return "Unknown Section";
+  if (
+    typeof sectionSource !== "undefined" &&
+    sectionSource[index - 1]
+  ) {
+    return sectionSource[index - 1].label;
+  }
 
-  return sectionSource?.[index - 1]?.label ?? "Unknown Section";
-}  /* ===============================
+  return "Unknown Section";
+}
+  /* ===============================
      CANONICAL SCORE STRING
      =============================== */
 
   function buildScoreString() {
     const tiles = [...document.querySelectorAll(".tile")];
-if (!tiles.length) {
+    if (!tiles.length || !(window.activeSectionText || "").trim()) {
   return null;
 }
 
@@ -840,18 +846,15 @@ if (!sentenceEl) return;
 
 const current = sentenceEl.textContent.trim();
 
-const expected =
-  (sentences[index] || "").trim();
+const expected = (sentences[index] || "").trim();
 
-  if (current === expected) {
-    correct++;
-
-    tile.classList.add("correct");
-
-    tile.style.background = "#bbf7d0";
-  } else {
-    tile.style.background = "#fecaca";
-  }
+if (current.trim() === expected) {
+  correct++;
+  tile.classList.add("correct");
+  tile.style.background = "#bbf7d0";
+} else {
+  tile.style.background = "#fecaca";
+}
 });
 
     const percent = Math.round((correct / total) * 100);
@@ -872,20 +875,11 @@ const expected =
      =============================== */
 
   submitBtn.addEventListener("click", () => {
-let dataString;
-
-try {
-  dataString = buildScoreString();
-} catch (err) {
-  console.error("buildScoreString crashed:", err);
-  alert("Score error (check console)");
-  return;
-}
-
-if (!dataString) {
-  alert("Start the game first.");
-  return;
-}
+    const dataString = buildScoreString();
+    if (!dataString) {
+      alert("Start the game first.");
+      return;
+    }
 
     scoreboard.textContent = dataString;
     scoreboard.style.display = "block";
