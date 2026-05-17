@@ -931,8 +931,10 @@ selectSection(0, false);
       t.style.pointerEvents = "none";
     });
 
-    requestAnimationFrame(() => saveToSupabase(dataString));
-  });
+if (typeof saveToSupabase === "function") {
+  requestAnimationFrame(() => saveToSupabase(dataString));
+}
+});
 
   /* ===============================
      DOWNLOAD / COPY
