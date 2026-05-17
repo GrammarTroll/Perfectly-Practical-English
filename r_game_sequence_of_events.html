@@ -123,13 +123,15 @@
 }
 .blank {
   display: inline-block;
-  min-width: 2ch;
+  min-width: 50px;
   padding: 0 6px;
-  border-bottom: 6px solid rgba(0, 0, 0, 0.12); /* Change to solid line */
+  border-bottom: 2px solid #999;
   color: red;
   font-weight: 700;
   letter-spacing: 0.02em;
+  vertical-align: middle;
 }
+
     .emoji {
       min-width: 34px;
       text-align: center;
@@ -171,12 +173,6 @@
       background: #2563eb;
     }
 
-.blank {
-  display: inline-block;
-  width: 50px;         /* adjust the length of the blank */
-  border-bottom: 1px solid #999;  /* thin grey line */
-  vertical-align: middle;
-}
 
 /* Footer styles */
 #copyrightSection {
@@ -471,9 +467,9 @@ function handleTileClick(tile) {
 const s1 = selected.querySelector('.sentence');
 const s2 = tile.querySelector('.sentence');
 
-const tmp = s1.innerText;
-s1.innerText = s2.innerText;
-s2.innerText = tmp;
+const tmp = s1.textContent;
+s1.textContent = s2.textContent;
+s2.textContent = tmp;
 
   selected.classList.remove('selected');
   selected = null;
@@ -835,7 +831,7 @@ function getSectionName() {
 
   function buildScoreString() {
     const tiles = [...document.querySelectorAll(".tile")];
-    if (!tiles.length || !window.activeSectionText.trim()) {
+    if (!tiles.length || !(window.activeSectionText || "").trim()) {
   return null;
 }
 
@@ -848,7 +844,7 @@ const sentenceEl = tile.querySelector(".sentence");
 
 if (!sentenceEl) return;
 
-const current = sentenceEl.innerText.trim();
+const current = sentenceEl.textContent.trim();
 
 const expected =
   (sentences[index] || "").trim();
@@ -882,7 +878,7 @@ const expected =
      =============================== */
 
   submitBtn.addEventListener("click", () => {
-    const dataString = buildScoreString();
+    const dataString = buildScoreString?.();
     if (!dataString) {
       alert("Start the game first.");
       return;
