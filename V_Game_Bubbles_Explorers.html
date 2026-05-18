@@ -2242,21 +2242,13 @@ window.saveResult = async function saveResult(text) {
   }
 
   const { data, error } = await supabaseClient
-    .from("scoreboard_raw")
-    .insert([
-      {
-        file_name,
-        category,
-        student_name,
-        student_id,
-        datetime,
-        score_correct,
-        score_total,
-        score_percent,
-        result_text: cleaned
-      }
-    ])
-    .select();
+  .from("scoreboard_raw")
+  .insert([
+    {
+      result_text: cleaned
+    }
+  ])
+  .select();
 
   if (error) {
     console.error("❌ INSERT FAILED:", error);
