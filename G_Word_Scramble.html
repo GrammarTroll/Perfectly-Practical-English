@@ -2957,6 +2957,7 @@ try {
   supabaseClient = null;
 }
 
+async function saveResult(text) {
   let cleaned;
 
   try {
@@ -3019,19 +3020,23 @@ try {
     }
   }
 
-  const { data, error } = await supabaseClient
+const { data, error } = await supabaseClient
   .from("scoreboard_raw")
-  .insert([
-    {
-      result_text: cleaned
-    }
-  ])
+  .update({
+    result_text: cleaned
+  })
+  .eq("student_id", id)
+  .eq("file_name", filename)
   .select();
 
-  if (error) {
-    console.error("❌ INSERT FAILED:", error);
-    return;
-  }
+if (error) {
+  console.error("❌ UPDATE FAILED:", error);
+  return;
+}
+
+if (!data || data.length === 0) {
+  console.warn("⚠️ No matching row found to update");
+}
 
   console.log("✅ INSERT SUCCESS:", data);
 };
