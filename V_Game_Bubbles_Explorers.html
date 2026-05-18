@@ -1662,19 +1662,27 @@ async function submitResults(){
       String(now.getHours()).padStart(2, '0') + ':' +
       String(now.getMinutes()).padStart(2, '0');
 
-    // Get current HTML filename
-    const currentFile =
-      window.location.pathname.split("/").pop();
+    // SAFER filename extraction
+    let currentFile = window.location.pathname.split('/').pop() || 'unknown.html';
 
-    // Build scoreboard line
+    // remove query strings/fragments if present
+    currentFile = currentFile.split('?')[0].split('#')[0];
+
+    // Build ONE complete line
     const scoreLine =
-      `${currentFile}|${activeSectionName}|${nameInput.value.trim()}|${idInput.value.trim()}|${dateStr}|${correctWords}/${totalWords}|${pct}%`;
+      currentFile + "|" +
+      activeSectionName + "|" +
+      nameInput.value.trim() + "|" +
+      idInput.value.trim() + "|" +
+      dateStr + "|" +
+      correctWords + "/" + totalWords + "|" +
+      pct + "%";
 
     // Display scoreboard
     scoreboardContainer.textContent = scoreLine;
     scoreButtons.style.display = 'flex';
 
-    // Upload to Supabase
+    // Upload EXACT same text to Supabase
     try {
 
       await saveResult(scoreLine);
@@ -1686,7 +1694,7 @@ async function submitResults(){
       console.error("❌ Upload failed:", err);
 
     }
-}  startBtn.addEventListener('click', startGame);
+}}  startBtn.addEventListener('click', startGame);
   submitBtn.addEventListener('click', submitResults);
   typingInput.addEventListener('input', handleTypingInput);
   canvas.addEventListener('click', ()=>{if(gameStarted && !gameStopped) typingInput.focus();});
