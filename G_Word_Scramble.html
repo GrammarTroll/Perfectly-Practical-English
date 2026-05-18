@@ -1950,7 +1950,7 @@ window.scrambleSubmitted = false;
 function checkEnableSubmit() {
 
   // 🔒 stay disabled forever after submit
-  if (scrambleSubmitted) {
+  if (window.scrambleSubmitted) {
     submitBtn.disabled = true;
     return;
   }
@@ -1967,6 +1967,7 @@ checkEnableSubmit(); // initialize state
 
 // ---------------------- SUBMIT ----------------------
 document.getElementById('scrambleSubmitBtn').addEventListener('click', async () => {
+
   const filename = window.location.pathname.split('/').pop();
   const nm = document.getElementById('scrambleName').value.trim();
   const id = document.getElementById('scrambleId').value.trim();
@@ -2008,8 +2009,12 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', async () 
   scoreOutput.textContent = scoreText;
   document.getElementById('scrambleScoreboard').style.display = 'block';
 
+await window.saveResult(scoreText);
+
+await window.saveResult(scoreText);
 window.scrambleSubmitted = true;
 document.getElementById('scrambleSubmitBtn').disabled = true;
+
   // lock ONLY after successful Supabase save
 // document.getElementById('scrambleSubmitBtn').disabled = true;
 });
