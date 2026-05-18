@@ -1966,7 +1966,7 @@ checkEnableSubmit(); // initialize state
 })();
 
 // ---------------------- SUBMIT ----------------------
-document.getElementById('scrambleSubmitBtn').addEventListener('click', () => {
+document.getElementById('scrambleSubmitBtn').addEventListener('click', async () => {
   const filename = window.location.pathname.split('/').pop();
   const nm = document.getElementById('scrambleName').value.trim();
   const id = document.getElementById('scrambleId').value.trim();
@@ -2004,12 +2004,23 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', () => {
 
   const scoreText = `${filename}|Scramble|${nm}|${id}|${dateStr}|${score}/${divs.length}|${percentScramble}%`;
 
+await fetch("https://YOUR_PROJECT_REF.supabase.co/rest/v1/YOUR_TABLE", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "apikey": "YOUR_SUPABASE_ANON_KEY",
+    "Authorization": "Bearer YOUR_SUPABASE_ANON_KEY"
+  },
+  body: JSON.stringify({
+    result: scoreText
+  })
+});
 
   const scoreOutput = document.getElementById('scrambleScoreOutput');
   scoreOutput.textContent = scoreText;
   document.getElementById('scrambleScoreboard').style.display = 'block';
 
-scrambleSubmitted = true;
+window.scrambleSubmitted = true;
 document.getElementById('scrambleSubmitBtn').disabled = true;
   // lock ONLY after successful Supabase save
 // document.getElementById('scrambleSubmitBtn').disabled = true;
