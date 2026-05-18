@@ -1643,31 +1643,50 @@ function stopGame(){
   submitBtn.disabled = false;
 }
 
-function submitResults(){ 
+async function submitResults(){ 
     if(!gameStarted) return;
+
     stopGame();
-    const pct = totalWords ? Math.round((correctWords/totalWords)*100) : 0;
+
+    const pct =
+      totalWords
+        ? Math.round((correctWords / totalWords) * 100)
+        : 0;
+
     const now = new Date();
 
-const dateStr =
-  String(now.getDate()).padStart(2, '0') + '/' +
-  String(now.getMonth() + 1).padStart(2, '0') + '/' +
-  now.getFullYear() + ' ' +
-  String(now.getHours()).padStart(2, '0') + ':' +
-  String(now.getMinutes()).padStart(2, '0');
+    const dateStr =
+      String(now.getDate()).padStart(2, '0') + '/' +
+      String(now.getMonth() + 1).padStart(2, '0') + '/' +
+      now.getFullYear() + ' ' +
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0');
 
+    // Get current HTML filename
+    const currentFile =
+      window.location.pathname.split("/").pop();
 
-    // Get current HTML file name
-    const currentFile = window.location.pathname.split("/").pop();
-
-    // Include filename at the start of the scoreboard line
+    // Build scoreboard line
     const scoreLine =
-  `${currentFile}|${activeSectionName}|${nameInput.value.trim()}|${idInput.value.trim()}|${dateStr}|${correctWords}/${totalWords}|${pct}%`;
+      `${currentFile}|${activeSectionName}|${nameInput.value.trim()}|${idInput.value.trim()}|${dateStr}|${correctWords}/${totalWords}|${pct}%`;
 
+    // Display scoreboard
     scoreboardContainer.textContent = scoreLine;
     scoreButtons.style.display = 'flex';
-}
-  startBtn.addEventListener('click', startGame);
+
+    // Upload to Supabase
+    try {
+
+      await saveResult(scoreLine);
+
+      console.log("✅ Score uploaded to Supabase");
+
+    } catch(err) {
+
+      console.error("❌ Upload failed:", err);
+
+    }
+}  startBtn.addEventListener('click', startGame);
   submitBtn.addEventListener('click', submitResults);
   typingInput.addEventListener('input', handleTypingInput);
   canvas.addEventListener('click', ()=>{if(gameStarted && !gameStopped) typingInput.focus();});
@@ -1793,8 +1812,8 @@ const dateStr =
   const scoreboard = document.getElementById('scoreboardContainer');
   const downloadTxtBtn = document.getElementById('downloadTxtBtn');
   const downloadPngBtn = document.getElementById('downloadPngBtn');
-  const nameInput = document.getElementById('nameInput');
-  const idInput = document.getElementById('idInput');
+const nameInput = document.getElementById('nameField');
+const idInput = document.getElementById('idField');
 
   if (scoreboard) {
     const getFilename = () => {
@@ -2136,7 +2155,7 @@ if (!supabaseClient) {
   console.error("❌ Supabase failed to initialize");
 }
 
-let lastUploadedScore = null;
+window.lastUploadedScore = null;
 
 window.saveResult = async function saveResult(text) {
 
