@@ -1796,7 +1796,7 @@ startBtn.addEventListener("click", () => {
   const section = window.SCRAMBLE_SECTIONS[window.SCRAMBLE_INDEX];
   if (!section) return;
 
-renderScrambleFromSection(section.text);
+window.renderScrambleFromSection(section.text);
 
 
   console.log("▶ Start pressed — section loaded:", section.name);
@@ -1945,7 +1945,7 @@ window.addEventListener("scramble:sectionchange", (e) => {
   const idInput = document.getElementById('scrambleId');
   const submitBtn = document.getElementById('scrambleSubmitBtn');
 
-let scrambleSubmitted = false;
+window.scrambleSubmitted = false;
 
 function checkEnableSubmit() {
 
@@ -2010,8 +2010,7 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', () => {
   document.getElementById('scrambleScoreboard').style.display = 'block';
 
 scrambleSubmitted = true;
-submitBtn.disabled = true;
-
+document.getElementById('scrambleSubmitBtn').disabled = true;
   // lock ONLY after successful Supabase save
 // document.getElementById('scrambleSubmitBtn').disabled = true;
 });
