@@ -1700,8 +1700,9 @@ async function submitResults(){
       console.error("❌ Upload failed:", err);
 
     }
-}}  startBtn.addEventListener('click', startGame);
-  submitBtn.addEventListener('click', submitResults);
+}
+
+startBtn.addEventListener('click', startGame);  submitBtn.addEventListener('click', submitResults);
   typingInput.addEventListener('input', handleTypingInput);
   canvas.addEventListener('click', ()=>{if(gameStarted && !gameStopped) typingInput.focus();});
 
