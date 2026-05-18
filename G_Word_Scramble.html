@@ -2004,18 +2004,7 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', async () 
 
   const scoreText = `${filename}|Scramble|${nm}|${id}|${dateStr}|${score}/${divs.length}|${percentScramble}%`;
 
-await fetch("https://YOUR_PROJECT_REF.supabase.co/rest/v1/YOUR_TABLE?id=eq.1", {
-  method: "PATCH",
-  headers: {
-    "Content-Type": "application/json",
-    "apikey": "YOUR_SUPABASE_ANON_KEY",
-    "Authorization": "Bearer YOUR_SUPABASE_ANON_KEY",
-    "Prefer": "return=representation"
-  },
-  body: JSON.stringify({
-    result: scoreText
-  })
-});  const scoreOutput = document.getElementById('scrambleScoreOutput');
+  const scoreOutput = document.getElementById('scrambleScoreOutput');
   scoreOutput.textContent = scoreText;
   document.getElementById('scrambleScoreboard').style.display = 'block';
 
