@@ -1235,22 +1235,25 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
 updateScoreboard();
 
-// force DOM to finish rendering scoreboard text
-await new Promise(r => requestAnimationFrame(r));
-
-const renderedScore =
-  scoreboard.innerText.trim() ||
-  scoreboard.textContent.trim();
-
-console.log("📤 FINAL SCOREBOARD:", renderedScore);
-
-await saveResult(renderedScore);
-
+/* SHOW SCOREBOARD FIRST */
 scoreboard.style.display = 'block';
 scoreButtons.style.display = 'flex';
 
-document.getElementById('submitBtn').disabled = true;
-});
+/* WAIT FOR DOM */
+await new Promise(r => requestAnimationFrame(r));
+
+/* EXTRACT FINAL TEXT */
+const renderedScore =
+  scoreboard.innerText
+  || scoreboard.textContent
+  || "";
+
+console.log("📤 FINAL SCOREBOARD:", renderedScore);
+
+/* SEND EXACT RENDERED RESULT */
+await saveResult(renderedScore.trim());
+
+document.getElementById('submitBtn').disabled = true;});
 
 
   // Copy score
