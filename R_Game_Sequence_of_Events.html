@@ -894,7 +894,7 @@ function buildScoreString() {
      SUBMIT (NON-DESTRUCTIVE)
      =============================== */
 
-submitBtn.addEventListener("click", () => {
+submitBtn.addEventListener("click", async () => {
   console.log("GAME OVER");
 
   const tiles = document.querySelectorAll(".tile");
@@ -903,7 +903,10 @@ if (!tiles.length) {
   return "NO TILES FOUND";
 }
   // Optional: still try to build score, but NEVER block game over
-  const dataString = buildScoreString();
+const dataString = buildScoreString();
+
+// 🔥 SEND TO SUPABASE
+await saveResult(dataString);
 
 scoreboard.textContent = dataString;
 
@@ -1321,6 +1324,113 @@ window.addEventListener("resize", adjustBodyPadding);
   document.addEventListener('gesturestart', preventGesture, { passive: false });
 })();
 </script>
+
+<!-- SUPABASE LIBRARY -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+const supabaseClient = window.supabase?.createClient(
+  'https://etwwriloppklhhkmswpr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
+);
+
+if (!supabaseClient) {
+  console.error("❌ Supabase failed to initialize");
+}
+
+window.lastUploadedScore = null;
+
+window.saveResult = async function saveResult(text) {
+
+  if (!supabaseClient) {
+    console.error("❌ No Supabase client");
+    return;
+  }
+
+  let cleaned;
+
+  try {
+
+    cleaned = String(text)
+      .replace(/\s+/g, " ")
+      .trim();
+
+  } catch (err) {
+
+    console.error("❌ Normalize error:", err);
+    return;
+  }
+
+  if (!cleaned) {
+    console.error("❌ Empty value blocked");
+    return;
+  }
+
+  if (cleaned === window.lastUploadedScore) {
+    console.log("⚠️ Duplicate blocked");
+    return;
+  }
+
+ 
+
+  console.log("📤 INSERTING:", cleaned);
+
+  // Parse existing score line
+  const parts = cleaned.split("|");
+
+  const file_name      = parts[0] || "";
+  const category       = parts[1] || "";
+  const student_name   = parts[2] || "";
+  const student_id     = parts[3] || "";
+  const datetime       = parts[4] || "";
+
+  let score_correct = null;
+  let score_total   = null;
+  let score_percent = null;
+
+  // Parse 12/30
+  if (parts[5]) {
+
+    const scoreMatch = parts[5].match(/^(\d+)\/(\d+)$/);
+
+    if (scoreMatch) {
+      score_correct = Number(scoreMatch[1]);
+      score_total   = Number(scoreMatch[2]);
+    }
+  }
+
+  // Parse 40%
+  if (parts[6]) {
+
+    const pctMatch = parts[6].match(/^(\d+)%$/);
+
+    if (pctMatch) {
+      score_percent = Number(pctMatch[1]);
+    }
+  }
+
+  const { data, error } = await supabaseClient
+  .from("scoreboard_raw")
+  .insert([
+    {
+      result_text: cleaned
+    }
+  ])
+  .select();
+
+if (error) {
+  console.error("❌ INSERT FAILED:", error);
+  alert("❌ INSERT FAILED:\n" + error.message);
+  return;
+}
+
+window.lastUploadedScore = cleaned;
+
+console.log("✅ INSERT SUCCESS:", data);
+alert("✅ Score saved successfully");};
+</script>
+
 
 
 
