@@ -1245,35 +1245,26 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
   gameActive = false;
 
-  updateScoreboard();
+scoreboard.style.display = "block";
+scoreButtons.style.display = "flex";
 
-  scoreboard.style.display = "block";
-  scoreButtons.style.display = "flex";
+updateScoreboard();
 
-  await new Promise(resolve =>
-    requestAnimationFrame(() =>
-      requestAnimationFrame(resolve)
-    )
-  );
+// LOCK VALUE IMMEDIATELY (this is key)
+const renderedScore = scoreboard.textContent.trim();
 
-const renderedScore = (
-  scoreboard.innerText ||
-  scoreboard.textContent ||
-  ""
-).trim();
-
-console.log("DEBUG SCORE:", {
-  renderedScore,
-  linesCount: lines.length,
-  html: scoreboard.innerHTML
-});
-
-if (!renderedScore.length) {
-  throw new Error(
-    "Scoreboard rendered blank before upload"
-  );
+if (!renderedScore) {
+  throw new Error("Scoreboard is empty");
 }
-  console.log("📤 SENDING:", renderedScore);
+
+await new Promise(r => setTimeout(r, 0));
+console.log("DEBUG SCORE:", renderedScore);
+
+if (!renderedScore) {
+  throw new Error(
+    "Scoreboard is empty"
+  );
+}  console.log("📤 SENDING:", renderedScore);
 
   if (!renderedScore) {
     alert("No score generated");
