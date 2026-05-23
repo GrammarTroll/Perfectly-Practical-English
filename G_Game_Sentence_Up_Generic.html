@@ -383,13 +383,11 @@ let vocabPairs = [];
 
 
 window.addEventListener("sectionchange", (e) => {
-  const index = e.detail?.index || 0;
-  const sectionText = e.detail?.text || "";
+  const index = e.detail?.index;
+  const sectionText = e.detail?.text ?? "";
 
-  if (index === undefined || index === null) return;
-
-  // store selection ONLY
-  activeSectionText = sectionText;
+  if (index == null) return;  // store selection ONLY
+  activeSectionText = (sectionText || "").trim();
 
   gameActive = false;
   hasSubmittedScore = false;
@@ -2052,7 +2050,7 @@ window.lastUploadedScore = null;
    WRITE FUNCTION (EXISTING)
    ========================= */
 
-window.saveResult = async function(text) {
+window.saveResult = async function (text) {
 
   if (!supabaseClient) {
     throw new Error("Supabase client missing");
@@ -2060,7 +2058,7 @@ window.saveResult = async function(text) {
 
   const cleaned = String(text || "")
     .replace(/\u00A0/g, " ")
-    .replace(/\r?\n/g, "\n")   // KEEP line structure
+    .replace(/\r?\n/g, "\n")
     .trim();
 
   if (!cleaned) {
@@ -2073,28 +2071,25 @@ window.saveResult = async function(text) {
     result_text: cleaned
   };
 
-const response =
-  await supabaseClient
+  // ✅ FIXED: proper Supabase v2 destructuring + explicit return payload
+  const { data, error } = await supabaseClient
     .from("scoreboard_raw")
-    .insert(payload);
-  console.log("RAW RESPONSE:", response);
+    .insert(payload)
+    .select();
 
-  if (response.error) {
-    console.error("SUPABASE ERROR:", response.error);
+  console.log("RAW RESPONSE:", { data, error });
 
-    throw new Error(
-      response.error.message ||
-      JSON.stringify(response.error)
-    );
+  if (error) {
+    console.error("SUPABASE ERROR:", error);
+    throw new Error(error.message || JSON.stringify(error));
   }
 
   window.lastUploadedScore = cleaned;
 
-  console.log("✅ Inserted:", response.data);
+  console.log("✅ Inserted:", data);
 
-  return response.data;
+  return data;
 };
-
 </script>
 
 
