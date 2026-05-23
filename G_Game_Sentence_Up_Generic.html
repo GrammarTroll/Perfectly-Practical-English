@@ -2030,7 +2030,29 @@ if (!supabaseClient) {
   console.error("❌ Supabase failed to initialize");
 }
 
+/* =========================
+   READ FUNCTION (NEW)
+   ========================= */
+
+window.loadResults = async function () {
+  const { data, error } = await supabaseClient
+    .from("scoreboard_raw")
+    .select("*")
+    .order("id", { ascending: false });
+
+  if (error) {
+    console.error("SUPABASE READ ERROR:", error);
+    throw error;
+  }
+
+  return data;
+};
+
 window.lastUploadedScore = null;
+
+/* =========================
+   WRITE FUNCTION (EXISTING)
+   ========================= */
 
 window.saveResult = async function(text) {
 
@@ -2038,10 +2060,11 @@ window.saveResult = async function(text) {
     throw new Error("Supabase client missing");
   }
 
-const cleaned = String(text || "")
-  .replace(/\u00A0/g, " ")
-  .replace(/\r?\n/g, "\n")   // KEEP line structure
-  .trim();
+  const cleaned = String(text || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/\r?\n/g, "\n")   // KEEP line structure
+    .trim();
+
   if (!cleaned) {
     throw new Error("Nothing to upload");
   }
@@ -2074,7 +2097,9 @@ const cleaned = String(text || "")
   console.log("✅ Inserted:", response.data);
 
   return response.data;
-};</script>
+};
+
+</script>
 
 
 
