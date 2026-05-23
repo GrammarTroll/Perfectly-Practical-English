@@ -3076,6 +3076,13 @@ exercise.dataset.percentage = percentage;
 const resultText = `${filename}|${section.replace(/:+$/, '').trim()}: ${subsection.replace(/^:+/, '').trim()}|${name}|${id}|${dateString}|${correctCount}/${totalExercises}|${percentage}%`;
       if (dataEl) dataEl.textContent = resultText;
 
+if (window.saveResult) {
+  const finalResultText = board.querySelector('.scoreboard-data')?.textContent;
+if (finalResultText && window.saveResult) {
+  window.saveResult(finalResultText);
+}
+}
+
       board.style.display = 'block';
     }
   });
@@ -4783,6 +4790,7 @@ window.saveResult = async function saveResult(text) {
 
 </body>
 </html>
+
 
 
 
