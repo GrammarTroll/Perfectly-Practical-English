@@ -427,15 +427,38 @@ window.addEventListener("sectionchange", (e) => {
  * - Otherwise treat source as literal raw text
  */
 async function resolveRaw(source) {
-  if (typeof source === "string" && !source.includes("\n")) {
+
+  // Only treat actual filenames as fetch targets
+  if (
+    typeof source === "string" &&
+    /^[\w\-./]+\.(txt|csv|json|md)$/i.test(source.trim())
+  ) {
     try {
-      const res = await fetch(source, { cache: "no-store" });
-      if (res.ok) return await res.text();
-    } catch {}
+
+      const res = await fetch(source.trim(), {
+        cache: "no-store"
+      });
+
+      if (!res.ok) {
+        throw new Error(`Fetch failed (${res.status})`);
+      }
+
+      return await res.text();
+
+    } catch (err) {
+
+      console.error(
+        "resolveRaw() fetch failed:",
+        source,
+        err
+      );
+
+      throw err;
+    }
   }
-  return source;
-}
-</script>
+
+  return String(source || "");
+}</script>
 
 
 <script>
@@ -1028,7 +1051,11 @@ async function initTiles() {
 
  // <- resolve raw text or fetch file
 
-  lines = rawText.trim().split("\n").map((line, i) => {
+  lines = rawText
+  .split("\n")
+  .map(x => x.trim())
+  .filter(x => x && x.includes("|"))
+  .map((line, i) => {
     const parts = line.split(/\|/);
     const before = parts[0].trim();
     const after = parts[parts.length - 1].trim();
@@ -1194,6 +1221,12 @@ async function initTiles() {
   let scores = [];
 
   function updateScoreboard() {
+
+  if (!Array.isArray(lines) || lines.length === 0) {
+    throw new Error(
+      "No game data available to score"
+    );
+  }
     const correctCount = lines.filter(t => t.correct === true).length;
     const totalCount = lines.length;
     const percent = totalCount === 0 ? 0 : Math.round((correctCount / totalCount) * 100);
@@ -1223,11 +1256,23 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     )
   );
 
-  const renderedScore =
-    scoreboard.innerText?.trim() ||
-    scoreboard.textContent?.trim() ||
-    "";
+const renderedScore = (
+  scoreboard.innerText ||
+  scoreboard.textContent ||
+  ""
+).trim();
 
+console.log("DEBUG SCORE:", {
+  renderedScore,
+  linesCount: lines.length,
+  html: scoreboard.innerHTML
+});
+
+if (!renderedScore.length) {
+  throw new Error(
+    "Scoreboard rendered blank before upload"
+  );
+}
   console.log("📤 SENDING:", renderedScore);
 
   if (!renderedScore) {
