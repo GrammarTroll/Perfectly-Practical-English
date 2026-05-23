@@ -1637,22 +1637,40 @@ update();
 
 <script>
 document.getElementById("startBtn").addEventListener("click", async () => {
+
   if (!activeSectionText || !activeSectionText.trim()) {
     alert("Select a section first.");
     return;
   }
 
-  // 🔑 THIS WAS MISSING
+  gameActive = false;
+
   lines = [];
-  await initTiles();     // ← selection appears HERE
+
+  await initTiles();
+
+  // Guard AFTER loading selected section
+  if (!Array.isArray(lines) || lines.length === 0) {
+    alert("Selected section contains no questions.");
+    renderAll();
+    return;
+  }
 
   gameActive = true;
   hasSubmittedScore = false;
 
-  syncHiddenInput();
-  startCountdown(0);
-});
+  scoreboard.style.display = "none";
+  scoreButtons.style.display = "none";
 
+  renderAll();
+
+  syncHiddenInput();
+
+  if (lines[0]) {
+    startCountdown(0);
+  }
+
+});
 
 
 </script>
