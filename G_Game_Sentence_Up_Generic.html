@@ -1956,58 +1956,55 @@ window.lastUploadedScore = null;
 
 window.saveResult = async function saveResult(text) {
 
-  if (!supabaseClient) {
-    console.error("❌ No Supabase client");
-    return;
-  }
-
-  let cleaned;
-
   try {
 
-    cleaned = String(text)
+    if (!supabaseClient) {
+      throw new Error("Supabase client not initialized");
+    }
+
+    const cleaned = String(text || "")
       .replace(/\s+/g, " ")
       .trim();
 
+    if (!cleaned) {
+      throw new Error("Empty scoreboard");
+    }
+
+    if (cleaned === window.lastUploadedScore) {
+      console.log("⚠️ Duplicate blocked");
+      return;
+    }
+
+    console.log("📤 SENDING:", cleaned);
+
+    const { data, error } = await supabaseClient
+      .from("scoreboard_raw")
+      .insert([
+        {
+          result_text: cleaned
+        }
+      ])
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    window.lastUploadedScore = cleaned;
+
+    console.log("✅ SAVED:", data);
+    alert("✅ Score saved");
+
   } catch (err) {
 
-    console.error("❌ Normalize error:", err);
-    return;
+    console.error("❌ SUPABASE ERROR:", err);
+
+    alert(
+      "SUPABASE FAILED\n\n" +
+      (err.message || JSON.stringify(err))
+    );
   }
-
-  if (!cleaned) {
-    console.error("❌ Empty value blocked");
-    return;
-  }
-
-  if (cleaned === window.lastUploadedScore) {
-    console.log("⚠️ Duplicate blocked");
-    return;
-  }
-
- 
-
-  console.log("📤 INSERTING:", cleaned);
-
-// Save full scoreboard string as ONE cell in Supabase
-const { data, error } = await supabaseClient
-  .from("scoreboard_raw")
-  .insert([
-    {
-      result_text: cleaned
-    }
-  ]);
-
-if (error) {
-  console.error("❌ INSERT FAILED:", error);
-  alert("❌ INSERT FAILED:\n" + error.message);
-  return;
-}
-window.lastUploadedScore = cleaned;
-
-console.log("✅ INSERT SUCCESS:", data);
-alert("✅ Score saved successfully");};
-</script>
+};</script>
 
 
 
