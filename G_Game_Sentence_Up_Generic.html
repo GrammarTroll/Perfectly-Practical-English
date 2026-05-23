@@ -1992,7 +1992,11 @@ window.saveResult = async function saveResult(text) {
       throw new Error("Rendered scoreboard empty");
     }
 
-const { data, error } =
+console.log("📤 INSERT PAYLOAD:", {
+  result_text: cleaned
+});
+
+const { data, error, status } =
   await supabaseClient
     .from("scoreboard_raw")
     .insert([
@@ -2002,12 +2006,24 @@ const { data, error } =
     ])
     .select();
 
-console.log("SUPABASE RESPONSE:", { data, error });
+console.log("SUPABASE STATUS:", status);
+console.log("SUPABASE DATA:", data);
+console.log("SUPABASE ERROR:", error);
 
-if (error) throw error;
+if (error) {
+  throw new Error(
+    `${error.message}
+code=${error.code}
+details=${error.details}
+hint=${error.hint}`
+  );
+}
+
+window.lastUploadedScore = cleaned;
+
+alert("✅ Uploaded to Supabase");
 
 console.log("✅ SAVED", data);
-
   } catch (err) {
 
     console.error(err);
