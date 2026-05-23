@@ -1223,21 +1223,30 @@ async function initTiles() {
   function updateScoreboard() {
 
   if (!Array.isArray(lines) || lines.length === 0) {
-    throw new Error(
-      "No game data available to score"
-    );
-  }
-    const correctCount = lines.filter(t => t.correct === true).length;
-    const totalCount = lines.length;
-    const percent = totalCount === 0 ? 0 : Math.round((correctCount / totalCount) * 100);
-    const name = document.getElementById('playerName').value.trim();
-    const id = document.getElementById('playerID').value.trim();
-    const dateStr = new Date().toLocaleString();
-    scoreboard.textContent =
-      `${filename}|${name}|${id}| ${dateStr}|${correctCount}/${totalCount}|${percent}%`;
-    scoreButtons.style.display = 'flex';
+    throw new Error("No game data available to score");
   }
 
+  const correctCount = lines.filter(t => t.correct === true).length;
+  const totalCount = lines.length;
+  const percent = totalCount === 0
+    ? 0
+    : Math.round((correctCount / totalCount) * 100);
+
+  const name = document.getElementById('playerName').value.trim();
+  const id = document.getElementById('playerID').value.trim();
+  const dateStr = new Date().toLocaleString();
+
+  // 🔑 SINGLE SOURCE OF TRUTH STRING
+  const scoreString =
+    `${filename}|${name}|${id}|${dateStr}|${correctCount}/${totalCount}|${percent}%`;
+
+  // render to UI
+  scoreboard.textContent = scoreString;
+  scoreButtons.style.display = 'flex';
+
+  // 🔑 CRITICAL: return raw value for Supabase upload
+  return scoreString;
+}
 
 document.getElementById("submitBtn").addEventListener("click", async () => {
 
@@ -1250,21 +1259,19 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     // 1. GAME OVER FIRST
     gameActive = false;
 
-    // 2. RENDER FINAL SCOREBOARD
-    scoreboard.style.display = "block";
-    scoreButtons.style.display = "flex";
+// 2. RENDER FINAL SCOREBOARD
+scoreboard.style.display = "block";
+scoreButtons.style.display = "flex";
 
-    updateScoreboard();
+// 🔑 SINGLE SOURCE OF TRUTH (this sets UI + returns value)
+const renderedScore = updateScoreboard();
 
-    // 3. FREEZE EXACT RENDERED VALUE
-    const renderedScore = (scoreboard.textContent || "").trim();
+// 3. FREEZE VALUE (already clean, no DOM dependency)
+console.log("📤 SENDING:", renderedScore);
 
-    console.log("📤 SENDING:", renderedScore);
-
-    if (!renderedScore) {
-      throw new Error("Scoreboard is empty");
-    }
-
+if (!renderedScore) {
+  throw new Error("Scoreboard is empty");
+}
     // 4. LOCK UI BEFORE NETWORK CALL
     document.getElementById("submitBtn").disabled = true;
 
