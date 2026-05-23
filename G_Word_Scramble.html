@@ -1990,20 +1990,12 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', () => {
     ? ((score / divs.length) * 100).toFixed(1)
     : '0.0';
 
-const scoreOutput = document.getElementById('scrambleScoreOutput');
+  const scoreText = `${filename}|Scramble|${nm}|${id}|${dateStr}|${score}/${divs.length}|${percentScramble}%`;
 
-const scoreboardEl = document.getElementById('scrambleScoreboard');
-
-// build ONE final rendered snapshot (entire UI block)
-const finalRenderedScoreboard = scoreboardEl.outerHTML;
-
-// still show it on screen
-scoreOutput.textContent = scoreText;
-scoreboardEl.style.display = 'block';
-document.getElementById('scrambleSubmitBtn').disabled = true;
-
-// ✅ SEND ONLY FULL RESULT (single unit)
-window.saveResult(finalRenderedScoreboard, id);
+  const scoreOutput = document.getElementById('scrambleScoreOutput');
+  scoreOutput.textContent = scoreText;
+  document.getElementById('scrambleScoreboard').style.display = 'block';
+  document.getElementById('scrambleSubmitBtn').disabled = true;
 });
 
 // Copy / download
