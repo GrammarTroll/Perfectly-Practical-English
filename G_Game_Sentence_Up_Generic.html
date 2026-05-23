@@ -1219,9 +1219,11 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     return;
   }
 
-  // 🔹 SECOND SUBMIT: score submission
-  if (!gameActive || hasSubmittedScore) return;
-  gameActive = false;
+// 🔹 SECOND SUBMIT: score submission
+if (hasSubmittedScore) return;
+
+// allow submission even if timer/game already stopped
+gameActive = false;
 
   const name = document.getElementById('playerName').value.trim();
   const id = document.getElementById('playerID').value.trim();
@@ -1990,18 +1992,21 @@ window.saveResult = async function saveResult(text) {
       throw new Error("Rendered scoreboard empty");
     }
 
-    const { data, error } =
-      await supabaseClient
-        .from("scoreboard_raw")
-        .insert([
-          {
-            result_text: cleaned
-          }
-        ]);
+const { data, error } =
+  await supabaseClient
+    .from("scoreboard_raw")
+    .insert([
+      {
+        result_text: cleaned
+      }
+    ])
+    .select();
 
-    if (error) throw error;
+console.log("SUPABASE RESPONSE:", { data, error });
 
-    console.log("✅ SAVED", data);
+if (error) throw error;
+
+console.log("✅ SAVED", data);
 
   } catch (err) {
 
