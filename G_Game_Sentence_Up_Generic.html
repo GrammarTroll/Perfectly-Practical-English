@@ -1250,39 +1250,27 @@ scoreButtons.style.display = "flex";
 
 updateScoreboard();
 
-// LOCK VALUE IMMEDIATELY (this is key)
-const renderedScore = scoreboard.textContent.trim();
+/* 🔑 FORCE DOM FLUSH BEFORE READING */
+scoreboard.offsetHeight;
+
+/* STABLE SNAPSHOT */
+const renderedScore = String(scoreboard.textContent || "").trim();
+
+console.log("📤 SENDING:", renderedScore);
 
 if (!renderedScore) {
   throw new Error("Scoreboard is empty");
 }
 
-await new Promise(r => setTimeout(r, 0));
-console.log("DEBUG SCORE:", renderedScore);
+try {
 
-if (!renderedScore) {
-  throw new Error(
-    "Scoreboard is empty"
-  );
-}  console.log("📤 SENDING:", renderedScore);
+  document.getElementById("submitBtn").disabled = true;
 
-  if (!renderedScore) {
-    alert("No score generated");
-    return;
-  }
+  const result = await saveResult(renderedScore);
 
-  try {
+  console.log("DB RESULT:", result);
 
-    document.getElementById("submitBtn").disabled = true;
-
-const result =
-  await saveResult(renderedScore);
-
-console.log("DB RESULT:", result);
-
-hasSubmittedScore = true;
-
-alert("Saved to Supabase");
+  hasSubmittedScore = true;
 
 } catch (err) {
 
@@ -1291,7 +1279,6 @@ alert("Saved to Supabase");
   console.error(err);
 
   alert("Upload failed\n\n" + err.message);
-
 }
 });
 
