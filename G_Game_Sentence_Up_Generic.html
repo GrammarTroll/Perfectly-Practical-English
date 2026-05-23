@@ -1235,7 +1235,16 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
 updateScoreboard();
 
-await saveResult(scoreboard.textContent);   // ← INSERT INTO SUPABASE
+// force DOM to finish rendering scoreboard text
+await new Promise(r => requestAnimationFrame(r));
+
+const renderedScore =
+  scoreboard.innerText.trim() ||
+  scoreboard.textContent.trim();
+
+console.log("📤 FINAL SCOREBOARD:", renderedScore);
+
+await saveResult(renderedScore);
 
 scoreboard.style.display = 'block';
 scoreButtons.style.display = 'flex';
