@@ -2953,10 +2953,11 @@ try {
   }
 
   supabaseClient = window.supabase.createClient(
-window.supabaseReady = true;
     'https://etwwriloppklhhkmswpr.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
+    'YOUR_ANON_KEY_HERE'
   );
+
+  window.supabaseReady = true;
 
   console.log("✅ Supabase client initialized:", !!supabaseClient);
 
@@ -2965,30 +2966,45 @@ window.supabaseReady = true;
   supabaseClient = null;
 }
 
-
 /* =========================
    SAVE RESULT (GLOBAL SAFE)
    ========================= */
 
 window.saveResult = async function (text, id = null) {
-if (!window.supabaseReady) {
-  throw new Error("Supabase not initialized yet");
-}
-  let cleaned;
-
-  try {
-    cleaned = String(text)
-      .replace(/\s+/g, " ")
-      .trim();
-  } catch (err) {
-    console.error("❌ Normalize error:", err);
-    return;
+  if (!window.supabaseReady || !supabaseClient) {
+    throw new Error("Supabase not initialized yet");
   }
 
-  // HARD SAFETY GATE
-alert("Saving not ready. Try again in a moment.");
-  throw new Error("Supabase not ready or empty payload");
-}
+  const cleaned = String(text)
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) {
+    throw new Error("Empty payload");
+  }
+
+  console.log("📤 INSERTING:", cleaned);
+
+  const client = window.supabaseClient || supabaseClient;
+
+const { data, error } = await client
+    .from("scoreboard_raw")
+    .insert([
+      {
+        result_text: cleaned,
+        student_id: id || null
+      }
+    ])
+    .select();
+
+  if (error) {
+    console.error("❌ SUPABASE ERROR:", error);
+    throw error;
+  }
+
+  console.log("✅ SAVED:", data);
+  return data;
+};
 
   /* =========================
      STRONG DEDUPE (single source of truth)
