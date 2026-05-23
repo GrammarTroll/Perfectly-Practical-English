@@ -2038,9 +2038,11 @@ window.saveResult = async function(text) {
     throw new Error("Supabase client missing");
   }
 
-  const cleaned = String(text || "")
-    .replace(/\u00A0/g, " ")
-    .trim();
+const cleaned = String(text || "")
+  .replace(/\u00A0/g, " ")
+  .replace(/\r?\n/g, " ")   // 🔥 removes line breaks
+  .replace(/\s+/g, " ")     // 🔥 collapses all whitespace
+  .trim();
 
   if (!cleaned) {
     throw new Error("Nothing to upload");
