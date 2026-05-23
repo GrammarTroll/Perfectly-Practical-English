@@ -1989,20 +1989,20 @@ window.saveResult = async function saveResult(text) {
 
   console.log("📤 INSERTING:", cleaned);
 
-  // Parse existing score line
+// Save full scoreboard string as ONE cell in Supabase
 const { data, error } = await supabaseClient
   .from("scoreboard_raw")
   .insert([
     {
-      result_text: scoreboard.textContent
+      result_text: cleaned
     }
   ]);
+
 if (error) {
   console.error("❌ INSERT FAILED:", error);
   alert("❌ INSERT FAILED:\n" + error.message);
   return;
 }
-
 window.lastUploadedScore = cleaned;
 
 console.log("✅ INSERT SUCCESS:", data);
