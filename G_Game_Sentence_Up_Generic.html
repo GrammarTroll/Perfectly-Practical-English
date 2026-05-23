@@ -1208,55 +1208,54 @@ async function initTiles() {
 
 document.getElementById("submitBtn").addEventListener("click", async () => {
 
-  // 🔹 FIRST SUBMIT: build selected section
-  if (lines.length === 0) {
-    if (!activeSectionText.trim()) {
-      alert("Select a topic first.");
-      return;
-    }
+  if (hasSubmittedScore) return;
 
-    await initTiles();
+  gameActive = false;
+
+  updateScoreboard();
+
+  scoreboard.style.display = "block";
+  scoreButtons.style.display = "flex";
+
+  await new Promise(resolve =>
+    requestAnimationFrame(() =>
+      requestAnimationFrame(resolve)
+    )
+  );
+
+  const renderedScore =
+    scoreboard.innerText?.trim() ||
+    scoreboard.textContent?.trim() ||
+    "";
+
+  console.log("📤 SENDING:", renderedScore);
+
+  if (!renderedScore) {
+    alert("No score generated");
     return;
   }
 
-// 🔹 SECOND SUBMIT: score submission
-if (hasSubmittedScore) return;
+  try {
 
-// allow submission even if timer/game already stopped
-gameActive = false;
+    document.getElementById("submitBtn").disabled = true;
 
-  const name = document.getElementById('playerName').value.trim();
-  const id = document.getElementById('playerID').value.trim();
-  const correctCount = lines.filter(t => t.correct === true).length;
-  const totalCount = lines.length;
-  const percent = totalCount === 0 ? 0 : Math.round((correctCount / totalCount) * 100);
-  const dateStr = new Date().toLocaleString();
+    await saveResult(renderedScore);
 
-  scores.push({ filename, name, id, date: dateStr, correct: correctCount, total: totalCount, percent });
-  hasSubmittedScore = true;
+    hasSubmittedScore = true;
 
-updateScoreboard();
+    console.log("✅ Upload complete");
 
-/* SHOW SCOREBOARD FIRST */
-scoreboard.style.display = 'block';
-scoreButtons.style.display = 'flex';
+  } catch (err) {
 
-/* WAIT FOR DOM */
-await new Promise(r => requestAnimationFrame(r));
+    document.getElementById("submitBtn").disabled = false;
 
-/* EXTRACT FINAL TEXT */
-const renderedScore =
-  scoreboard.innerText
-  || scoreboard.textContent
-  || "";
+    console.error(err);
 
-console.log("📤 FINAL SCOREBOARD:", renderedScore);
+    alert("Upload failed\n\n" + err.message);
 
-/* SEND EXACT RENDERED RESULT */
-await saveResult(renderedScore.trim());
+  }
 
-document.getElementById('submitBtn').disabled = true;});
-
+});
 
   // Copy score
   document.getElementById('copyScore').addEventListener('click', () => {
@@ -1977,63 +1976,46 @@ if (!supabaseClient) {
 
 window.lastUploadedScore = null;
 
-window.saveResult = async function saveResult(text) {
+window.saveResult = async function(text) {
 
-  try {
+  const cleaned =
+    String(text ?? "")
+    .replace(/\u00A0/g, " ")
+    .trim();
 
-    const cleaned =
-      String(text ?? "")
-      .replace(/\u00A0/g, " ")
-      .trim();
-
-    console.log("📤 RECEIVED:", cleaned);
-
-    if (!cleaned.length) {
-      throw new Error("Rendered scoreboard empty");
-    }
-
-console.log("📤 INSERT PAYLOAD:", {
-  result_text: cleaned
-});
-
-const { data, error, status } =
-  await supabaseClient
-    .from("scoreboard_raw")
-    .insert([
-      {
-        result_text: cleaned
-      }
-    ])
-    .select();
-
-console.log("SUPABASE STATUS:", status);
-console.log("SUPABASE DATA:", data);
-console.log("SUPABASE ERROR:", error);
-
-if (error) {
-  throw new Error(
-    `${error.message}
-code=${error.code}
-details=${error.details}
-hint=${error.hint}`
-  );
-}
-
-window.lastUploadedScore = cleaned;
-
-alert("✅ Uploaded to Supabase");
-
-console.log("✅ SAVED", data);
-  } catch (err) {
-
-    console.error(err);
-
-    alert("SUPABASE FAILED\n\n" + err.message);
-
+  if (!cleaned.length) {
+    throw new Error("Rendered scoreboard empty");
   }
 
-};
+  console.log(
+    "CLIENT?",
+    !!supabaseClient,
+    "TABLE=scoreboard_raw"
+  );
 
+  console.log("📤 INSERT:", {
+    result_text: cleaned
+  });
+
+  const { data, error } =
+    await supabaseClient
+      .from("scoreboard_raw")
+      .insert([
+        {
+          result_text: cleaned
+        }
+      ]);
+
+  if (error) {
+    throw error;
+  }
+
+  window.lastUploadedScore = cleaned;
+
+  console.log("✅ SAVED", data);
+
+  return data;
+};
 </script>
 
 
