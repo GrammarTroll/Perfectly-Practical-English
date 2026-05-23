@@ -2009,11 +2009,17 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', async () 
   scoreOutput.textContent = scoreText;
   document.getElementById('scrambleScoreboard').style.display = 'block';
 
-await window.saveResult(scoreText, id);
+try {
+  await window.saveResult(scoreText, id);
 
-window.scrambleSubmitted = true;
-document.getElementById('scrambleSubmitBtn').disabled = true;
+  window.scrambleSubmitted = true;
+  document.getElementById('scrambleSubmitBtn').disabled = true;
 
+} catch (err) {
+  console.error("Save failed:", err);
+  alert("Save failed: " + err.message);
+  return;
+}
   // lock ONLY after successful Supabase save
 // document.getElementById('scrambleSubmitBtn').disabled = true;
 });
@@ -2056,7 +2062,7 @@ const highlightBtn = document.getElementById('highlightSelected');
 const copyBtn = document.getElementById('copySelected');
 const restartBtn = document.getElementById('restartBtn');
 const pauseResumeBtn = document.getElementById('pauseResumeBtn');
-const startBtn = document.getElementById('startBtn');
+const speechStartBtn = document.getElementById('startBtn');
 
 /* =========================
    State & Voices
@@ -2222,7 +2228,7 @@ function speakDialog(text) {
 /* =========================
    START
 ========================= */
-startBtn.addEventListener('click', () => {
+speechStartBtn.addEventListener('click', () => {
   speechSynthesis.cancel();
   isPaused = false;
   pauseResumeBtn.textContent = '⏸';
@@ -2939,6 +2945,7 @@ window.addEventListener("resize", adjustBodyPadding);
 <script>
 
 let supabaseClient = null;
+window.supabaseReady = false;
 
 try {
   if (!window.supabase || !window.supabase.createClient) {
@@ -2946,6 +2953,7 @@ try {
   }
 
   supabaseClient = window.supabase.createClient(
+window.supabaseReady = true;
     'https://etwwriloppklhhkmswpr.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
   );
@@ -2963,7 +2971,9 @@ try {
    ========================= */
 
 window.saveResult = async function (text, id = null) {
-
+if (!window.supabaseReady) {
+  throw new Error("Supabase not initialized yet");
+}
   let cleaned;
 
   try {
@@ -2976,19 +2986,18 @@ window.saveResult = async function (text, id = null) {
   }
 
   // HARD SAFETY GATE
-  if (!cleaned || !supabaseClient) {
-    console.error("❌ Blocked: empty value or Supabase not ready");
-    return;
-  }
+alert("Saving not ready. Try again in a moment.");
+  throw new Error("Supabase not ready or empty payload");
+}
 
   /* =========================
      STRONG DEDUPE (single source of truth)
      ========================= */
-  window.__lastUploadKey ||= "";
+  window.__lastUploadKey ||= null;
 
   const uploadKey = cleaned;
 
-  if (uploadKey === window.__lastUploadKey) {
+  if (window.__lastUploadKey && uploadKey === window.__lastUploadKey) {
     console.log("⚠️ Duplicate blocked");
     return;
   }
@@ -3001,6 +3010,7 @@ window.saveResult = async function (text, id = null) {
      SUPABASE INSERT
      ========================= */
   const { data, error } = await supabaseClient
+if (error) throw error;
     .from("scoreboard_raw")
     .insert([
       {
