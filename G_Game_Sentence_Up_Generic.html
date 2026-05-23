@@ -366,7 +366,7 @@ button:disabled {
 
   <!-- Copyright Footer Section -->
   <section id="copyrightSection">
-    <div class="footer-note copyright">© 2026 Perfectly Practical English™. All rights reserved.</div>
+    <div class="footer-note copyright">© 2026 Nearly Perfect Grammar™. All rights reserved.</div>
   </section>
 
   </div>
@@ -1233,25 +1233,14 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
   scores.push({ filename, name, id, date: dateStr, correct: correctCount, total: totalCount, percent });
   hasSubmittedScore = true;
 
-  updateScoreboard();
-scoreboard.style.display = 'block';
-scoreButtons.style.display = 'flex';
-document.getElementById('submitBtn').disabled = true;
-
-// ✅ SEND FINAL SCOREBOARD TO SUPABASE
 updateScoreboard();
 
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    const finalScore = scoreboard?.textContent?.trim();
+await saveResult(scoreboard.textContent);   // ← INSERT INTO SUPABASE
 
-    if (!finalScore) {
-      console.warn("⚠️ Empty scoreboard blocked Supabase");
-      return;
-    }
+scoreboard.style.display = 'block';
+scoreButtons.style.display = 'flex';
 
-    window.saveResult?.(finalScore);
-  });
+document.getElementById('submitBtn').disabled = true;
 });
 
 
@@ -1562,6 +1551,12 @@ update();
 
 })();
 </script>
+
+
+
+
+
+
 
 
 
@@ -1909,6 +1904,35 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
+
+<script>
+(function() {
+  // Prevent pinch-to-zoom
+  function preventPinch(e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }
+
+  // Prevent double-tap zoom
+  let lastTouchTime = 0;
+  function preventDoubleTap(e) {
+    const now = Date.now();
+    if (now - lastTouchTime < 300) {
+      e.preventDefault();
+    }
+    lastTouchTime = now;
+  }
+
+  // Block gesture events on iOS
+  function preventGesture(e) {
+    e.preventDefault();
+  }
+
+  document.addEventListener('touchstart', preventPinch, { passive: false });
+  document.addEventListener('touchend', preventDoubleTap, { passive: false });
+  document.addEventListener('gesturestart', preventGesture, { passive: false });
+})();
+</script>
+
 <!-- SUPABASE LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -1923,7 +1947,7 @@ if (!supabaseClient) {
   console.error("❌ Supabase failed to initialize");
 }
 
-let lastUploadedScore = null;
+window.lastUploadedScore = null;
 
 window.saveResult = async function saveResult(text) {
 
@@ -1932,19 +1956,16 @@ window.saveResult = async function saveResult(text) {
     return;
   }
 
-  // ======================
-  // NORMALIZE INPUT
-  // ======================
   let cleaned;
 
   try {
-    cleaned = (typeof text === "string")
-      ? text
-      : JSON.stringify(text);
 
-    cleaned = cleaned.replace(/\s+/g, " ").trim();
+    cleaned = String(text)
+      .replace(/\s+/g, " ")
+      .trim();
 
   } catch (err) {
+
     console.error("❌ Normalize error:", err);
     return;
   }
@@ -1954,31 +1975,71 @@ window.saveResult = async function saveResult(text) {
     return;
   }
 
-  if (cleaned === lastUploadedScore) {
+  if (cleaned === window.lastUploadedScore) {
     console.log("⚠️ Duplicate blocked");
     return;
   }
 
-  lastUploadedScore = cleaned;
+ 
 
-  console.log("📤 INSERTING INTO scoreboard_raw:", cleaned);
+  console.log("📤 INSERTING:", cleaned);
 
-  const { data, error } = await supabaseClient
-    .from("scoreboard_raw")
-    .insert([
-      { result_text: cleaned }
-    ])
-    .select();
+  // Parse existing score line
+  const parts = cleaned.split("|");
 
-  if (error) {
-    console.error("❌ INSERT FAILED FULL ERROR:", error);
-    return;
+  const file_name      = parts[0] || "";
+  const category       = parts[1] || "";
+  const student_name   = parts[2] || "";
+  const student_id     = parts[3] || "";
+  const datetime       = parts[4] || "";
+
+  let score_correct = null;
+  let score_total   = null;
+  let score_percent = null;
+
+  // Parse 12/30
+  if (parts[5]) {
+
+    const scoreMatch = parts[5].match(/^(\d+)\/(\d+)$/);
+
+    if (scoreMatch) {
+      score_correct = Number(scoreMatch[1]);
+      score_total   = Number(scoreMatch[2]);
+    }
   }
 
-  console.log("✅ INSERT SUCCESS:", data);
-};
+  // Parse 40%
+  if (parts[6]) {
 
+    const pctMatch = parts[6].match(/^(\d+)%$/);
+
+    if (pctMatch) {
+      score_percent = Number(pctMatch[1]);
+    }
+  }
+
+  const { data, error } = await supabaseClient
+  .from("scoreboard_raw")
+  .insert([
+    {
+      result_text: cleaned
+    }
+  ])
+  .select();
+
+if (error) {
+  console.error("❌ INSERT FAILED:", error);
+  alert("❌ INSERT FAILED:\n" + error.message);
+  return;
+}
+
+window.lastUploadedScore = cleaned;
+
+console.log("✅ INSERT SUCCESS:", data);
+alert("✅ Score saved successfully");};
 </script>
+
+
 
 </body>
 </html>
