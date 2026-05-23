@@ -386,7 +386,7 @@ window.addEventListener("sectionchange", (e) => {
   const index = e.detail?.index || 0;
   const sectionText = e.detail?.text || "";
 
-  if (!index || index === 0 || !sectionText.trim()) return;
+  if (index === undefined || index === null) return;
 
   // store selection ONLY
   activeSectionText = sectionText;
@@ -1259,19 +1259,21 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     // 1. GAME OVER FIRST
     gameActive = false;
 
-// 2. RENDER FINAL SCOREBOARD
-scoreboard.style.display = "block";
-scoreButtons.style.display = "flex";
+    // 2. RENDER FINAL SCOREBOARD
+    scoreboard.style.display = "block";
+    scoreButtons.style.display = "flex";
 
-// 🔑 SINGLE SOURCE OF TRUTH (this sets UI + returns value)
-const renderedScore = updateScoreboard();
+    updateScoreboard();
 
-// 3. FREEZE VALUE (already clean, no DOM dependency)
-console.log("📤 SENDING:", renderedScore);
+    // 3. FREEZE EXACT RENDERED VALUE
+    const renderedScore = updateScoreboard();
 
-if (!renderedScore) {
-  throw new Error("Scoreboard is empty");
-}
+    console.log("📤 SENDING:", renderedScore);
+
+    if (!renderedScore) {
+      throw new Error("Scoreboard is empty");
+    }
+
     // 4. LOCK UI BEFORE NETWORK CALL
     document.getElementById("submitBtn").disabled = true;
 
