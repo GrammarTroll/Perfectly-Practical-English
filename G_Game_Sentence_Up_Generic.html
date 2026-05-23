@@ -1239,22 +1239,24 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
     document.getElementById("submitBtn").disabled = true;
 
-    await saveResult(renderedScore);
+const result =
+  await saveResult(renderedScore);
 
-    hasSubmittedScore = true;
+console.log("DB RESULT:", result);
 
-    console.log("✅ Upload complete");
+hasSubmittedScore = true;
 
-  } catch (err) {
+alert("Saved to Supabase");
 
-    document.getElementById("submitBtn").disabled = false;
+} catch (err) {
 
-    console.error(err);
+  document.getElementById("submitBtn").disabled = false;
 
-    alert("Upload failed\n\n" + err.message);
+  console.error(err);
 
-  }
+  alert("Upload failed\n\n" + err.message);
 
+}
 });
 
   // Copy score
@@ -1978,45 +1980,47 @@ window.lastUploadedScore = null;
 
 window.saveResult = async function(text) {
 
-  const cleaned =
-    String(text ?? "")
+  if (!supabaseClient) {
+    throw new Error("Supabase client missing");
+  }
+
+  const cleaned = String(text || "")
     .replace(/\u00A0/g, " ")
     .trim();
 
-  if (!cleaned.length) {
-    throw new Error("Rendered scoreboard empty");
+  if (!cleaned) {
+    throw new Error("Nothing to upload");
   }
 
-  console.log(
-    "CLIENT?",
-    !!supabaseClient,
-    "TABLE=scoreboard_raw"
-  );
+  console.log("📤 Uploading:", cleaned);
 
-  console.log("📤 INSERT:", {
+  const payload = {
     result_text: cleaned
-  });
+  };
 
-  const { data, error } =
+  const response =
     await supabaseClient
       .from("scoreboard_raw")
-      .insert([
-        {
-          result_text: cleaned
-        }
-      ]);
+      .insert(payload)
+      .select();
 
-  if (error) {
-    throw error;
+  console.log("RAW RESPONSE:", response);
+
+  if (response.error) {
+    console.error("SUPABASE ERROR:", response.error);
+
+    throw new Error(
+      response.error.message ||
+      JSON.stringify(response.error)
+    );
   }
 
   window.lastUploadedScore = cleaned;
 
-  console.log("✅ SAVED", data);
+  console.log("✅ Inserted:", response.data);
 
-  return data;
-};
-</script>
+  return response.data;
+};</script>
 
 
 
