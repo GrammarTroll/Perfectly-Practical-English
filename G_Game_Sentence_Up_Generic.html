@@ -2040,10 +2040,8 @@ window.saveResult = async function(text) {
 
 const cleaned = String(text || "")
   .replace(/\u00A0/g, " ")
-  .replace(/\r?\n/g, " ")   // 🔥 removes line breaks
-  .replace(/\s+/g, " ")     // 🔥 collapses all whitespace
+  .replace(/\r?\n/g, "\n")   // KEEP line structure
   .trim();
-
   if (!cleaned) {
     throw new Error("Nothing to upload");
   }
