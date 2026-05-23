@@ -1796,7 +1796,7 @@ startBtn.addEventListener("click", () => {
   const section = window.SCRAMBLE_SECTIONS[window.SCRAMBLE_INDEX];
   if (!section) return;
 
-window.renderScrambleFromSection(section.text);
+renderScrambleFromSection(section.text);
 
 
   console.log("▶ Start pressed — section loaded:", section.name);
@@ -1945,29 +1945,16 @@ window.addEventListener("scramble:sectionchange", (e) => {
   const idInput = document.getElementById('scrambleId');
   const submitBtn = document.getElementById('scrambleSubmitBtn');
 
-window.scrambleSubmitted = false;
-
-function checkEnableSubmit() {
-
-  // 🔒 stay disabled forever after submit
-  if (window.scrambleSubmitted) {
-    submitBtn.disabled = true;
-    return;
+  function checkEnableSubmit() {
+    submitBtn.disabled = !(nameInput.value.trim() && idInput.value.trim());
   }
-
-  submitBtn.disabled =
-    !(nameInput.value.trim() && idInput.value.trim());
-}
-
-nameInput.addEventListener('input', checkEnableSubmit);
-idInput.addEventListener('input', checkEnableSubmit);
-
-checkEnableSubmit(); // initialize state
+  nameInput.addEventListener('input', checkEnableSubmit);
+  idInput.addEventListener('input', checkEnableSubmit);
+  checkEnableSubmit(); // initialize state
 })();
 
 // ---------------------- SUBMIT ----------------------
-document.getElementById('scrambleSubmitBtn').addEventListener('click', async () => {
-
+document.getElementById('scrambleSubmitBtn').addEventListener('click', () => {
   const filename = window.location.pathname.split('/').pop();
   const nm = document.getElementById('scrambleName').value.trim();
   const id = document.getElementById('scrambleId').value.trim();
@@ -2003,31 +1990,20 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', async () 
     ? ((score / divs.length) * 100).toFixed(1)
     : '0.0';
 
-  const scoreText = `${filename}|Scramble|${nm}|${id}|${dateStr}|${score}/${divs.length}|${percentScramble}%`;
-
-  const scoreOutput = document.getElementById('scrambleScoreOutput');
-  scoreOutput.textContent = scoreText;
-  document.getElementById('scrambleScoreboard').style.display = 'block';
-
 const scoreOutput = document.getElementById('scrambleScoreOutput');
 
-const finalScoreboardText =
-  (scoreOutput?.textContent || scoreText)
-    .replace(/\s+/g, ' ')
-    .trim();
+const scoreboardEl = document.getElementById('scrambleScoreboard');
 
-const result = await window.saveResult(finalScoreboardText, id);
+// build ONE final rendered snapshot (entire UI block)
+const finalRenderedScoreboard = scoreboardEl.outerHTML;
 
-if (!result || !result.ok) {
-  alert("Save failed. Not submitted.");
-  console.error("Submission blocked:", result);
-  return;
-}
-
-window.scrambleSubmitted = true;
+// still show it on screen
+scoreOutput.textContent = scoreText;
+scoreboardEl.style.display = 'block';
 document.getElementById('scrambleSubmitBtn').disabled = true;
-  // lock ONLY after successful Supabase save
-// document.getElementById('scrambleSubmitBtn').disabled = true;
+
+// ✅ SEND ONLY FULL RESULT (single unit)
+window.saveResult(finalRenderedScoreboard, id);
 });
 
 // Copy / download
@@ -2058,6 +2034,7 @@ setupCopyDownload(
     borderDiv.style.pointerEvents = "none";
     document.body.appendChild(borderDiv);
   </script>
+
 
 
 <script>
@@ -2282,143 +2259,6 @@ restartBtn.addEventListener('click', () => {
 });
 </script>
 
-<script>
-  window.OVERLAY_ENABLED = false;
-
-  (function(){
-    if (window.OVERLAY_ENABLED === true) return; // <<< stops the overlay from running
-
-    /* =========================================
-       1. RAW TEXT BLOCK — organized by team
-       ========================================= */
-
-    const rawText = (function(){/*
-    ~Team A List~
-    |Team A|11Phapmuan|12Piyanun|13Chinpasut|15Theetat|17Pasit/Patit|
-    |Team A|11Piyawarin|12Thanatphat|13Warawat|15Thanakorn|17Ronnakrit|
-    |Team A|11Thanisorn|12Papon|13Supasan|15Nunthapat|17Thanatthat|
-    |Team A|11Nanon|12Phunakorn|13Kuariwin|15Noppathorn|17Korrerk|
-    |Team A|11Chayakarn|12Sukhaphat|13Patawee|15Krittaphat|17Pothsawee|
-    |Team A|11Arichai|12Athiwat|13Kawinpob|15Pudh|17Korapat|
-    |Team A|11Withawich|12Teerapich|13Chinnawat|15Tanaphat|17Pakorn|
-    |Team A|11Theeraphat|12Akkhardwin|13Phattadon|15Nop|17Tashtada|
-
-    ~Team B List~
-    |Team B|11KornKamol|12Achiravit|13Pavee|15Pitchayapoom|17Denthanat|
-    |Team B|11Karn/Atis|12Puttipat|13Tanaphon|15Pannathorn|17Phurithat|
-    |Team B|11Songsathit|12Wongsapat|13Nathavee|15Thanadech|17Sanant|
-    |Team B|11Prachaya|12Supatat|13Kantaphon|15Supakorn|17Theetat|
-    |Team B|11Thanapat|12Parnasarn|13Kittitee|15Nuttapong|17Kanoknat|
-    |Team B|11Puripat|12Akrit|13Phuthaninphat|15Aritouch|17Krittitee|
-    |Team B|11Papeem|12Techin|13Phupa|15Mangkorn|17Kanapos|
-    */}).toString()
-    .replace(/^[^\/]+\/\*!?/, '')
-    .replace(/\*\/[^\/]+$/, '')
-    .trim();
-
-
-    /* =========================================
-       2. Parse teams
-       ========================================= */
-
-    const teamA = [];
-    const teamB = [];
-    let currentTeam = null;
-
-    rawText.split(/\r?\n/).forEach(line => {
-      line = line.trim();
-      if (!line) return;
-
-      if (/~Team A List~/i.test(line)) currentTeam = "A";
-      else if (/~Team B List~/i.test(line)) currentTeam = "B";
-      else if (currentTeam === "A") teamA.push(line.replace(/\//g,"•"));
-      else if (currentTeam === "B") teamB.push(line.replace(/\//g,"•"));
-    });
-
-    const allLines = teamA.concat(teamB);
-
-
-    /* =========================================
-       3. OVERLAY EXCLUSION CONFIG
-       ========================================= */
-
-    const RAW_EXCLUDED_DIVS = `
-    <div id="dynamicInputsReadingSpeaking">
-    <div id="instructionsContainerReadingSpeaking">
-    <div id="dynamicInputsWritingSpeaking">
-    <div id="instructionsContainerWritingSpeaking">
-    <div id="outputContainerReadingSpeaking">
-    <div id="outputContainerWritingSpeaking">
-    `;
-
-    const OVERLAY_EXCLUSIONS = [
-      ...RAW_EXCLUDED_DIVS.matchAll(/id="([^"]+)"/g)
-    ].map(m => `#${m[1]}`);
-
-
-    /* =========================================
-       4. Overlay engine
-       ========================================= */
-
-    const numberPattern = /^(?:Question\s*)?\d+[\.\)\:\-]/i;
-
-    function isExcluded(el) {
-      if (OVERLAY_EXCLUSIONS.some(sel => el.closest(sel))) return true;
-      if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return true;
-      return false;
-    }
-
-    function createOverlay(numberEl, line) {
-      if (numberEl.dataset.overlayApplied) return;
-
-      const overlayDiv = document.createElement("div");
-      overlayDiv.style.fontSize = "10px";
-      overlayDiv.style.lineHeight = "10px";
-      overlayDiv.style.color = "#1976d2";
-      overlayDiv.style.fontWeight = "bold";
-      overlayDiv.style.pointerEvents = "none";
-      overlayDiv.style.marginBottom = "2px";
-      overlayDiv.textContent = line;
-
-      numberEl.parentNode.insertBefore(overlayDiv, numberEl);
-      numberEl.dataset.overlayApplied = "1";
-    }
-
-    function scanAndAssignOverlays() {
-      const numberEls = [];
-
-      document.querySelectorAll("body *").forEach(el => {
-        if (isExcluded(el)) return;
-        if (el.childElementCount !== 0) return;
-
-        const text = el.textContent.trim();
-        if (!numberPattern.test(text)) return;
-
-        numberEls.push(el);
-      });
-
-      numberEls.forEach((el, index) => {
-        const line =
-          (teamA.length && teamB.length)
-            ? (index % 2 === 0
-                ? teamA[Math.floor(Math.random() * teamA.length)]
-                : teamB[Math.floor(Math.random() * teamB.length)])
-            : allLines[Math.floor(Math.random() * allLines.length)];
-
-        createOverlay(el, line);
-      });
-    }
-
-
-    /* =========================================
-       5. Run
-       ========================================= */
-
-    scanAndAssignOverlays();
-    setInterval(scanAndAssignOverlays, 700);
-
-  })();
-</script>
 
 
 <script>
@@ -2944,13 +2784,13 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
-
 <!-- SUPABASE LIBRARY -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
 
 let supabaseClient = null;
+window.supabaseReady = false;
 
 try {
   if (!window.supabase || !window.supabase.createClient) {
@@ -2962,6 +2802,8 @@ try {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
   );
 
+  window.supabaseReady = true;
+
   console.log("✅ Supabase client initialized:", !!supabaseClient);
 
 } catch (err) {
@@ -2971,29 +2813,40 @@ try {
 
 
 /* =========================
-   SAVE RESULT (GLOBAL SAFE)
+   SAVE RESULT (CLEAN SINGLE SOURCE OF TRUTH)
    ========================= */
 
 window.saveResult = async function (text, id = null) {
 
-  let cleaned;
-
-  try {
-    cleaned = String(text).replace(/\s+/g, " ").trim();
-  } catch (err) {
-    console.error("❌ Normalize error:", err);
-    return { ok: false, error: "normalize_failed" };
+  if (!window.supabaseReady || !supabaseClient) {
+    throw new Error("Supabase not initialized yet");
   }
 
-  if (!cleaned || !supabaseClient) {
-    console.error("❌ Blocked: empty value or Supabase not ready");
-    return { ok: false, error: "client_not_ready" };
+  const cleaned = String(text)
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) {
+    throw new Error("Empty payload");
   }
 
-  console.log("📤 INSERTING SCOREBOARD:", {
-    result_text: cleaned,
-    student_id: id || null
-  });
+/* =========================
+   DEDUPE (SAFE PER USER + TEXT)
+   ========================= */
+
+const uploadKey = `${id || "no-id"}::${cleaned}`;
+
+if (window.__lastUploadKey === uploadKey) {
+  console.log("⚠️ Duplicate blocked");
+  return;
+}
+
+window.__lastUploadKey = uploadKey;
+
+console.log("📤 INSERTING:", cleaned);
+  /* =========================
+     SUPABASE INSERT (ONLY ONE)
+     ========================= */
 
   const { data, error } = await supabaseClient
     .from("scoreboard_raw")
@@ -3006,65 +2859,16 @@ window.saveResult = async function (text, id = null) {
     .select();
 
   if (error) {
-    console.error("❌ SUPABASE INSERT FAILED:", error.message, error);
-    return { ok: false, error };
-  }
-
-  console.log("✅ INSERT SUCCESS:", data);
-
-  return { ok: true, data };
-};
-
-  let cleaned;
-
-  try {
-    cleaned = String(text)
-      .replace(/\s+/g, " ")
-      .trim();
-  } catch (err) {
-    console.error("❌ Normalize error:", err);
-    return;
-  }
-
-  // HARD SAFETY GATE
-  if (!cleaned || !supabaseClient) {
-    console.error("❌ Blocked: empty value or Supabase not ready");
-    return;
-  }
-
-  /* =========================
-     STRONG DEDUPE (single source of truth)
-     ========================= */
-const uploadKey = cleaned + "|" + Date.now();
-  console.log("📤 INSERTING SCOREBOARD:", {
-  result_text: cleaned,
-  student_id: id || null
-});
-
-  /* =========================
-     SUPABASE INSERT
-     ========================= */
-  const { data, error } = await supabaseClient
-    .from("scoreboard_raw")
-    .insert([
-      {
-        result_text: cleaned,
-        student_id: id || null
-      }
-    ])
-    .select();
-
-  if (error) {
-    console.error("❌ SUPABASE INSERT FAILED:", error.message, error);
-    window.lastSupabaseError = error;
-    return;
+    console.error("❌ SUPABASE ERROR:", error);
+    throw error;
   }
 
   if (!data || data.length === 0) {
     console.warn("⚠️ Insert succeeded but no row returned");
   }
 
-  console.log("✅ INSERT SUCCESS:", data);
+  console.log("✅ SAVED:", data);
+  return data;
 };
 
 </script>
