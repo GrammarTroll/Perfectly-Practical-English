@@ -838,7 +838,10 @@ vocabPairs.forEach((p, i) => {
   output += `${i+1}. ${sentence ? sentence : '[No response]'}\n`;
 });
   scoreOutput.textContent = output;
-  scoreboard.style.display = 'block';
+scoreboard.style.display = 'block';
+
+window.saveResult?.(output);
+
 }
 // Copy / Download / PNG
 document.getElementById('copyBtn').addEventListener('click', ()=> navigator.clipboard.writeText(scoreOutput.textContent).then(()=>alert('Copied!'))); 
@@ -1080,87 +1083,6 @@ const btns = [
 
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(function () {
-  /* ===============================
-     1. SUPABASE SETUP
-     =============================== */
-  const supabase = window.supabase.createClient(
-    "https://rhmbuqwbjacvbobxmyvx.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJobWJ1cXdiamFjdmJvYnhteXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDkyNzAsImV4cCI6MjA4MTEyNTI3MH0.lcSeTgeFAr-I286W9yXEGxWmqGAP5fZPV9jsaaCvTY8"
-  );
-
-  /* ===============================
-     2. READ SCOREBOARD FROM DOM
-     =============================== */
-  function readScoreboard() {
-    const filename = document.getElementById("fileNameOutput")?.textContent || null;
-    const student_name = document.getElementById("userNameOutput")?.textContent || null;
-    const student_id = document.getElementById("userIdOutput")?.textContent || null;
-
-    const scoreText = document.getElementById("scoreOutput")?.textContent || "";
-    const match = scoreText.match(/(\d+)\/(\d+)\s+\(([\d.]+)%\)/);
-
-    return {
-      filename,
-      student_name,
-      student_id,
-      score: match ? Number(match[1]) : null,
-      percentage_correct: match ? Number(match[3]) : null,
-      extra_data: {
-        page: window.location.pathname,
-        sections: Array.from(
-          document.querySelectorAll(".section-score")
-        ).map(el => el.textContent)
-      }
-    };
-  }
-
-  /* ===============================
-     3. INSERT INTO SUPABASE
-     =============================== */
-  async function saveScoreboard() {
-    const row = readScoreboard();
-
-    console.log("📤 Sending to Supabase:", row);
-
-    const { data, error } = await supabase
-      .from("student_scores")
-      .insert([{
-        ...row,
-        date: new Date().toISOString()
-      }])
-      .select();
-
-    if (error) {
-      console.error("❌ Supabase insert failed:", error);
-    } else {
-      console.log("✅ Supabase insert success:", data);
-    }
-  }
-
-  /* ===============================
-     4. AUTO-HOOK INTO SUBMIT BUTTON
-     =============================== */
-  document.addEventListener("DOMContentLoaded", () => {
-    const submitBtn = document.getElementById("submitBtn");
-
-    if (!submitBtn) {
-      console.warn("⚠️ submitBtn not found");
-      return;
-    }
-
-    submitBtn.addEventListener("click", async () => {
-      // Wait a tick so scoreboard finishes rendering
-      setTimeout(saveScoreboard, 300);
-    });
-
-    console.log("✅ Supabase scoreboard auto-save active");
-  });
-
-})();
-</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -1637,7 +1559,6 @@ function getAllReadableNodes() {
 })();
 </script>
 
-
 <script>
 (function () {
 
@@ -1789,67 +1710,77 @@ function getAllReadableNodes() {
 })();
 </script>
 
-<script>
-(function () {
-  'use strict';
+<!-- SUPABASE LIBRARY -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  // =========================
-  // 1. REMOVE THAI + EMOJIS
-  // =========================
-  function sanitizeForSpeech(text) {
-    return (text || "")
-      // remove Thai Unicode block
-      .replace(/[\u0E00-\u0E7F]/g, "")
-      // remove emojis
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
-      // clean spacing
-      .replace(/\s+/g, " ")
-      .trim();
+<script>
+
+const supabaseClient = window.supabase?.createClient(
+  'https://etwwriloppklhhkmswpr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
+);
+
+if (!supabaseClient) {
+  console.error("❌ Supabase failed to initialize");
+}
+
+let lastUploadedScore = null;
+
+window.saveResult = async function saveResult(text) {
+
+  if (!supabaseClient) {
+    console.error("❌ No Supabase client");
+    return;
   }
 
-  // =========================
-  // 2. WRAP SpeechSynthesisUtterance
-  // =========================
-  const OriginalUtterance = window.SpeechSynthesisUtterance;
+  // ======================
+  // NORMALIZE INPUT
+  // ======================
+  let cleaned;
 
-  window.SpeechSynthesisUtterance = function (text, ...args) {
-    const cleaned = sanitizeForSpeech(text);
-    return new OriginalUtterance(cleaned, ...args);
-  };
+  try {
+    cleaned = (typeof text === "string")
+      ? text
+      : JSON.stringify(text);
 
-  // preserve prototype
-  window.SpeechSynthesisUtterance.prototype =
-    OriginalUtterance.prototype;
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
 
-  // =========================
-  // 3. WRAP speechSynthesis.speak
-  // (catches direct usage too)
-  // =========================
-  const synth = window.speechSynthesis;
-  const originalSpeak = synth.speak.bind(synth);
+  } catch (err) {
+    console.error("❌ Normalize error:", err);
+    return;
+  }
 
-  synth.speak = function (utterance) {
-    try {
-      if (utterance && utterance.text) {
-        utterance.text = sanitizeForSpeech(utterance.text);
-      }
-    } catch (e) {}
-    return originalSpeak(utterance);
-  };
+  if (!cleaned) {
+    console.error("❌ Empty value blocked");
+    return;
+  }
 
-  // =========================
-  // 4. OPTIONAL GLOBAL HELPERS
-  // =========================
-  window.speechSanitize = sanitizeForSpeech;
+  if (cleaned === lastUploadedScore) {
+    console.log("⚠️ Duplicate blocked");
+    return;
+  }
 
-  window.createCleanSpeech = function (text, options = {}) {
-    const u = new SpeechSynthesisUtterance(sanitizeForSpeech(text));
-    Object.assign(u, options);
-    return u;
-  };
+  lastUploadedScore = cleaned;
 
-})();
+  console.log("📤 INSERTING INTO scoreboard_raw:", cleaned);
+
+  const { data, error } = await supabaseClient
+    .from("scoreboard_raw")
+    .insert([
+      { result_text: cleaned }
+    ])
+    .select();
+
+  if (error) {
+    console.error("❌ INSERT FAILED FULL ERROR:", error);
+    return;
+  }
+
+  console.log("✅ INSERT SUCCESS:", data);
+};
+
 </script>
+
 
 
 </body>

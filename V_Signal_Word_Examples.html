@@ -1307,905 +1307,743 @@ Step |back|.
 
 `;
 
-(async function initQuiz() {
-  // Resolve raw text FIRST
-  const rawExercises = await resolveRaw(rawExercisesSource);
+</script>
 
-// ===============================
-// PARSE ~Section blocks
-// ===============================
-function parseRawExerciseSections(raw) {
-  const sections = [];
-  let current = null;
+<script>
+/* =========================================
+   FREEZE RAW TEXT FOR SECTION SELECTOR
+   (MUST RUN AFTER wordListSource EXISTS)
+   ========================================= */
 
-  raw.split(/\r?\n/).forEach(line => {
-    const text = line.trim();
-    if (!text) return;
+(function () {
+  window.__RAW_SECTION_TEXT__ = rawVocabText;
+  console.log("✅ RAW SECTION TEXT FROZEN",
+              window.__RAW_SECTION_TEXT__.length);
+})();
 
-    // "~" starts a new section (grammar only)
-    if (text[0] === "~") {
-      current = {
-        name: text.slice(1).trim(),
-        exercises: []
-      };
-      sections.push(current);
-      return;
-    }
+</script>
 
-    // any other non-empty line is an exercise
-    if (current) {
-      current.exercises.push(text);
-    }
-  });
-
-  return sections;
-}
-
-// Parse raw exercise text into full section objects
-window.RAW_SECTIONS = parseRawExerciseSections(rawExercises);
-
-// Use first section’s first line as intro (section-safe)
-const firstSection = window.RAW_SECTIONS[0];
-if (firstSection && firstSection.exercises.length) {
-  const instructionsEl = document.getElementById("instructions");
-  if (instructionsEl) {
-    instructionsEl.textContent = firstSection.exercises[0];
-  }
-}
-
-// Expose section names ONLY to the selector wheel
-window.SCRAMBLE_SECTIONS = window.RAW_SECTIONS.map((s, i) => ({
-  id: i,
-  name: s.name
-}));
-
-// Initial selector index
-window.SCRAMBLE_INDEX = 0;
+<!-- 👇 PUT THE NEW SCRIPT HERE -->
+<script>
+/* SECTION → VOCAB BRIDGE */
+let vocabPairs = [];
 
 
-function parseExercise(exerciseText, index) {
-  let prompt = `${index}.`;
-  let sentence = exerciseText;
+window.addEventListener("sectionchange", (e) => {
+  const sectionText = e.detail?.text || "";
 
-  // If a prompt delimiter exists, split safely
-  if (exerciseText.includes(' - ')) {
-    const parts = exerciseText.split(' - ');
-    prompt = `${index}. ${parts[0]}`;
-    sentence = parts.slice(1).join(' - ');
-  }
+  vocabPairs = parseVocabInput(sectionText);
 
-  if (!sentence) sentence = exerciseText;
-
-  // Tokenize: pipes > words > spaces > punctuation
-  const tokens = sentence.match(
-    /\|\s*[^|]+\s*\||\s+|[A-Za-z0-9']+|[.,!?;]/g
-  ) || [];
-
-  const parsedSentence = tokens.map(token => {
-    // ✅ Pipe-delimited = correct answer
-    if (token.startsWith('|') && token.endsWith('|')) {
-      const clean = token.slice(1, -1);
-      return `<span class="word" data-correct="true">${clean}</span>`;
-    }
-
-    return token.trim()
-      ? `<span>${token}</span>`
-      : token;
-  }).join('');
-
-  return `${prompt} ${parsedSentence}`;
-}
-
-
-function renderExercises() {
-  const exercisesContainer = document.getElementById('exercises');
-
-// allow rendering once exercises exist
-if (!window.quizExercises || window.quizExercises.length === 0) {
-  exercisesContainer.innerHTML = "";
-  return;
-}
-
-  exercisesContainer.innerHTML = "";
-
-  const section = window.RAW_SECTIONS[window.SCRAMBLE_INDEX];
-  if (!section) return;
-
-  // ✅ SECTION HEADER (this is what was missing)
-  const header = document.createElement('div');
-  header.className = 'section-header';
-  header.textContent = section.name;
-  header.style.fontWeight = 'bold';
-  header.style.marginBottom = '8px';
-  header.style.color = '#1976d2';
-
-  exercisesContainer.appendChild(header);
-
-  const exercises = window.quizExercises || [];
-  if (!exercises.length) return;
-
-  exercises.forEach((exercise, index) => {
-    const parsedExercise = parseExercise(exercise, index + 1);
-
-    const exerciseContainer = document.createElement('div');
-    exerciseContainer.classList.add('exercise-container');
-
-    const sentence = document.createElement('div');
-    sentence.classList.add('sentence');
-    sentence.innerHTML = parsedExercise;
-
-    exerciseContainer.appendChild(sentence);
-    exercisesContainer.appendChild(exerciseContainer);
-  });
-
-  document.querySelectorAll('.word').forEach(word => {
-    word.addEventListener('click', handleWordClick);
-  });
-}
-
-window.startPOSSection = function () {
-  const section = window.RAW_SECTIONS?.[window.SCRAMBLE_INDEX];
-  if (!section) return;
-
-  // feed the engine
-  window.quizExercises = section.exercises.slice(1);
-
-  // reset engine state
-  window.currentExerciseIndex = 0;
-  window.score = 0;
-
-  // 🔥 RENDER FIRST (DOM MUST EXIST)
-  renderExercises();
-
-  // 🔥 THEN INITIALIZE SCORING STATE
-  window.correctAnswers = 0;
-  window.scoreSubmitted = false;
-  window.pipedWordsCount =
-    document.querySelectorAll('#exercises .word[data-correct="true"]').length;
-};
-
-// ---------------------- WORD CLICK (SELECTION ONLY) ----------------------
-function handleWordClick(event) {
-  const word = event.target;
-
-  if (window.scoreSubmitted) return;
-  if (!word.classList.contains('word')) return;
-
-  word.classList.toggle('selected-word');
-}
-
-
-// ---------------------- INITIAL RENDER ----------------------
-
-// NOTE: Do NOT call updateScore() here — prevents extra score at top
-// ---------------------- SUBMISSION ----------------------
-
-// Grab elements
-const nameInput = document.getElementById('name');
-const idInput = document.getElementById('id');
-const submitBtn = document.getElementById('grammarsubmit');
-
-// Enable/disable submit button based on inputs
-function checkInputs() {
-  submitBtn.disabled = !(nameInput.value && idInput.value);
-}
-
-nameInput.addEventListener('input', checkInputs);
-idInput.addEventListener('input', checkInputs);
-
-submitBtn.addEventListener('click', function () {
-  const name = nameInput.value.trim();
-  const id = idInput.value.trim();
-
-  if (!name || !id) {
-    alert('Please enter both your name and ID before submitting.');
+  if (!vocabPairs.length) {
     return;
   }
 
-  // ✅ COUNT TOTAL PIPED WORDS
-  const totalPiped = document.querySelectorAll(
-    '#exercises .word[data-correct="true"]'
-  ).length;
+  studentSentences = Array(vocabPairs.length).fill("");
+  flashcardIndex = 0;        // ✅ THIS FIXES IT
 
-  // ✅ COUNT USER-SELECTED PIPED WORDS
-  const selectedCorrect = document.querySelectorAll(
-    '#exercises .word[data-correct="true"].selected-word'
-  ).length;
-
-  // ✅ LOCK SCORE
-  window.correctAnswers = selectedCorrect;
-  window.pipedWordsCount = totalPiped;
-  window.scoreSubmitted = true;
-
-  const percentage =
-    totalPiped > 0
-      ? ((selectedCorrect / totalPiped) * 100).toFixed(2)
-      : '0.00';
-
-  const date = new Date();
-  const dateString =
-    `${String(date.getDate()).padStart(2,'0')}/` +
-    `${String(date.getMonth()+1).padStart(2,'0')}/` +
-    `${String(date.getFullYear()).slice(-2)}, ` +
-    `${String(date.getHours()).padStart(2,'0')}:` +
-    `${String(date.getMinutes()).padStart(2,'0')}`;
-
-  const filename = window.location.pathname.split('/').pop();
-  const section = 'Parts of Speech';
-
-  const resultText =
-    `Filename: ${filename}` +
-    `|Section: ${section}` +
-    `|Name: ${name}` +
-    `|ID: ${id}` +
-    `|Date: ${dateString}` +
-    `|Score: ${selectedCorrect} / ${totalPiped}` +
-    `|${percentage}%`;
-
-  document.getElementById('result').textContent = resultText;
-  document.getElementById('scoreboardContainer').style.display = 'block';
-  document.getElementById('scoreboardBtns').style.display = 'flex';
-});
-  // ---------------------- EXPORT ACTIONS ----------------------
-
-  document.getElementById('grammarCopyBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(
-      document.getElementById('result').textContent
-    ).then(() => alert('Score copied to clipboard!'));
-  });
-
-  document.getElementById('grammarDownloadTxtBtn').addEventListener('click', () => {
-    const blob = new Blob(
-      [document.getElementById('result').textContent],
-      { type: 'text/plain' }
-    );
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'score.txt';
-    link.click();
-  });
-
-document.getElementById('grammarDownloadPngBtn').addEventListener('click', () => {
-  const resultEl = document.getElementById('result');
-
-  // Create temporary wrapper
-  const wrapper = document.createElement('div');
-  wrapper.style.background = '#ffffff';
-  wrapper.style.padding = '10px';
-  wrapper.style.display = 'inline-block';
-  wrapper.style.fontFamily = getComputedStyle(resultEl).fontFamily;
-  wrapper.style.fontSize = getComputedStyle(resultEl).fontSize;
-  wrapper.style.color = getComputedStyle(resultEl).color;
-
-  // Clone result text
-  const clone = resultEl.cloneNode(true);
-  wrapper.appendChild(clone);
-
-  // Temporarily add to DOM
-  document.body.appendChild(wrapper);
-
-  html2canvas(wrapper, {
-    backgroundColor: '#ffffff'
-  }).then(canvas => {
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/png');
-    link.download = 'score.png';
-    link.click();
-
-    // Clean up
-    document.body.removeChild(wrapper);
-  });
+  renderVocabList();
+  updateFlashcard();
+  checkInputs();
 });
 
-})();
+
+
+
+
+// 🔥 INIT FIRST SECTION (AFTER LISTENER EXISTS)
+window.addEventListener("DOMContentLoaded", () => {
+  if (window.getSelectedSectionIndex) {
+    const i = window.getSelectedSectionIndex();
+    if (i === 0 && typeof selectSection === "function") {
+      selectSection(1, true);
+    }
+  }
+});
+
+
 </script>
 
 <script>
+/* =========================================
+   HARD SECTION CORPUS OVERRIDE (MC-IMMUNE)
+   ========================================= */
 
-    // Green border
-    const borderDiv = document.createElement("div");
-    borderDiv.style.position = "fixed";
-    borderDiv.style.inset = "0";
-    borderDiv.style.border = "10px solid #39FF14";
-    borderDiv.style.boxSizing = "border-box";
-    borderDiv.style.zIndex = "9999";
-    borderDiv.style.pointerEvents = "none";
-    document.body.appendChild(borderDiv);
-  </script>
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
 (function () {
-  /* ===============================
-     1. SUPABASE SETUP
-     =============================== */
-  const supabase = window.supabase.createClient(
-    "https://rhmbuqwbjacvbobxmyvx.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJobWJ1cXdiamFjdmJvYnhteXZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NDkyNzAsImV4cCI6MjA4MTEyNTI3MH0.lcSeTgeFAr-I286W9yXEGxWmqGAP5fZPV9jsaaCvTY8"
-  );
 
-  /* ===============================
-     2. READ SCOREBOARD FROM DOM
-     =============================== */
-  function readScoreboard() {
-    const filename = document.getElementById("fileNameOutput")?.textContent || null;
-    const student_name = document.getElementById("userNameOutput")?.textContent || null;
-    const student_id = document.getElementById("userIdOutput")?.textContent || null;
+  // Preserve original full text
+  const FULL_TEXT = window.wordListText;
 
-    const scoreText = document.getElementById("scoreOutput")?.textContent || "";
-    const match = scoreText.match(/(\d+)\/(\d+)\s+\(([\d.]+)%\)/);
+  // Active corpus exposed globally
+  window.activeExerciseText = "";
 
-    return {
-      filename,
-      student_name,
-      student_id,
-      score: match ? Number(match[1]) : null,
-      percentage_correct: match ? Number(match[3]) : null,
-      extra_data: {
-        page: window.location.pathname,
-        sections: Array.from(
-          document.querySelectorAll(".section-score")
-        ).map(el => el.textContent)
-      }
-    };
-  }
-
-  /* ===============================
-     3. INSERT INTO SUPABASE
-     =============================== */
-  async function saveScoreboard() {
-    const row = readScoreboard();
-
-    console.log("📤 Sending to Supabase:", row);
-
-    const { data, error } = await supabase
-      .from("student_scores")
-      .insert([{
-        ...row,
-        date: new Date().toISOString()
-      }])
-      .select();
-
-    if (error) {
-      console.error("❌ Supabase insert failed:", error);
-    } else {
-      console.log("✅ Supabase insert success:", data);
-    }
-  }
-
-  /* ===============================
-     4. AUTO-HOOK INTO SUBMIT BUTTON
-     =============================== */
-  document.addEventListener("DOMContentLoaded", () => {
-    const submitBtn = document.getElementById("submitBtn");
-
-    if (!submitBtn) {
-      console.warn("⚠️ submitBtn not found");
-      return;
-    }
-
-    submitBtn.addEventListener("click", async () => {
-      // Wait a tick so scoreboard finishes rendering
-      setTimeout(saveScoreboard, 300);
-    });
-
-    console.log("✅ Supabase scoreboard auto-save active");
-  });
-
-})();
-</script>
-
-
-
-<script>
-/* =========================
-   Buttons
-========================= */
-const highlightBtn = document.getElementById('highlightSelected');
-const copyBtn = document.getElementById('copySelected');
-const restartBtn = document.getElementById('restartBtn');
-const pauseResumeBtn = document.getElementById('pauseResumeBtn');
-const readStartBtn = document.getElementById('startBtn');
-
-
-/* =========================
-   State & Voices
-========================= */
-let isPaused = false;
-let teacherVoice = null;
-let studentVoice = null;
-
-/* =========================
-   Load voices (teacher = Zira/Samantha/US Female, student = Aria/Victoria/UK Female)
-========================= */
-function loadVoices() {
-  const voices = speechSynthesis.getVoices();
-  if (!voices.length) return;
-
-  // Teacher: en-US Zira (Windows), Google US English Female (Chrome), Samantha (Mac)
-  teacherVoice =
-    voices.find(v => v.name === "Microsoft Zira" && v.lang === "en-US") ||
-    voices.find(v => v.name === "Google US English Female") ||
-    voices.find(v => v.name === "Samantha") ||
-    voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female")) ||
-    voices[0];
-
-  // Student: en-GB Aria (Windows), Google UK English (Chrome), Victoria (Mac)
-  studentVoice =
-    voices.find(v => v.name === "Microsoft Aria" && v.lang === "en-GB") ||
-    voices.find(v => v.name === "Google UK English") ||
-    voices.find(v => v.name === "Victoria") ||
-    voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female")) ||
-    voices[0];
-}
-
-// Load voices dynamically
-speechSynthesis.onvoiceschanged = loadVoices;
-loadVoices();
-
-/* =========================
-   Selection helpers
-========================= */
-function getSelectedText() {
-  return window.getSelection().toString().trim();
-}
-
-function getReadableFromCaret() {
-  const sel = window.getSelection();
-  if (!sel.rangeCount) return null;
-
-  const range = sel.getRangeAt(0);
-
-  let node = range.startContainer;
-  if (node.nodeType === 3) node = node.parentElement;
-
-  const block = node.closest('p, div, li, article, section');
-  if (!block) return null;
-
-  const subRange = document.createRange();
-  subRange.selectNodeContents(block);
-  subRange.setStart(range.startContainer, range.startOffset);
-
-  const text = subRange.toString().trim();
-  return text || null; // return null only if empty
-}
-
-
-/* =========================
-   Highlight toggle
-========================= */
-highlightBtn.addEventListener('click', () => {
-  const selection = window.getSelection();
-  if (!selection.rangeCount) return;
-
-  const range = selection.getRangeAt(0);
-  if (range.collapsed) return;
-
-  let alreadyHighlighted = false;
-  const spans = range.commonAncestorContainer.querySelectorAll
-    ? range.commonAncestorContainer.querySelectorAll('span.highlighted')
-    : [];
-
-  spans.forEach(span => {
-    if (selection.containsNode(span, true)) {
-      alreadyHighlighted = true;
+  // 🔥 OVERRIDE wordListText dynamically
+  Object.defineProperty(window, "wordListText", {
+    get() {
+      return window.activeExerciseText || FULL_TEXT;
+    },
+    set(val) {
+      // allow initial assignment only
+      window._wordListText = val;
     }
   });
 
-  if (!alreadyHighlighted) {
-    const span = document.createElement('span');
-    span.className = 'highlighted';
-    range.surroundContents(span);
-  } else {
-    const contents = range.cloneContents();
-    const frag = document.createDocumentFragment();
+  // Listen for section changes
+window.addEventListener("sectionchange", (e) => {
+  const sectionText = e.detail?.text || "";
 
-    Array.from(contents.childNodes).forEach(node => {
-      if (node.nodeType === 1 && node.classList.contains('highlighted')) {
-        while (node.firstChild) frag.appendChild(node.firstChild);
-      } else {
-        frag.appendChild(node.cloneNode(true));
-      }
-    });
+  // Build sentences ONLY from section
+  sentences.length = 0;
+  allCorrectAnswers.length = 0;
 
-    range.deleteContents();
-    range.insertNode(frag);
-  }
-
-  selection.removeAllRanges();
-  selection.addRange(range);
-});
-
-/* =========================
-   Copy selected text
-========================= */
-copyBtn.addEventListener('click', async () => {
-  const text = getSelectedText();
-  if (!text) return alert('No text selected');
-
-  try {
-    await navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
-  } catch (err) {
-    alert('Copy failed');
-  }
-});
-
-/* =========================
-   Speech functions
-========================= */
-function speakTeacher(text) {
-  const u = new SpeechSynthesisUtterance(text);
-  u.voice = teacherVoice;
-  u.rate = 0.88;    // slightly slower, more mature
-  u.pitch = 1.15;   // slightly lower for adult warmth
-  u.volume = 0.95;
-  u.text = text.replace(/([,.!?])/g, "$1 "); // slight pause after punctuation
-  speechSynthesis.speak(u);
-}
-
-
-function speakStudent(text) {
-  const u = new SpeechSynthesisUtterance(text);
-  u.voice = studentVoice;
-  u.rate = 0.98;
-  u.pitch = 1.50;
-  u.volume = 0.80;
-  speechSynthesis.speak(u);
-}
-
-
-function speakDialog(text) {
-  const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  const lines = sectionText
+    .split("\n")
+    .map(s => s.trim())
+    .filter(Boolean);
 
   lines.forEach(line => {
-    if (/^teacher:/i.test(line)) {
-      speakTeacher(line.replace(/^teacher:\s*/i, ""));
-    } else if (/^student:/i.test(line)) {
-      speakStudent(line.replace(/^student:\s*/i, ""));
-    } else {
-      speakTeacher(line);
+    if (!line.includes("|")) return;
+    sentences.push(line);
+
+    const matches = line.match(/\|(.+?)\|/g);
+    if (matches) {
+      matches.forEach(m =>
+        allCorrectAnswers.push(m.replace(/\|/g, ""))
+      );
     }
   });
-}
 
-/* =========================
-   START
-========================= */
-readStartBtn.addEventListener('click', () => {
-  speechSynthesis.cancel();
-  isPaused = false;
-  pauseResumeBtn.textContent = '⏸';
-  ...
+  allCorrectAnswers = [...new Set(allCorrectAnswers)];
+
+  // Reset runtime state
+  nextSentenceIndex = 0;
+  activeSentences.length = 0;
+  totalWords = 0;
+  correctWords = 0;
+
+  // Clear UI
+  mcButtonsContainer.innerHTML = "";
+  typedDisplay.textContent = "";
+
+  console.log("✅ Section locked:", e.detail.name);
 });
 
-  const selectedText = getSelectedText();
-  if (selectedText) {
-    speakStudent(selectedText);
-    return;
-  }
+})();
+</script>
 
-  const caretText = getReadableFromCaret();
-  if (!caretText) {
-    alert("Place the cursor inside readable text.");
-    return;
-  }
-
-  speakDialog(caretText);
-});
-
-/* =========================
-   Pause / Resume
-========================= */
-pauseResumeBtn.addEventListener('click', () => {
-  if (!speechSynthesis.speaking) return;
-
-  if (!isPaused) {
-    speechSynthesis.pause();
-    isPaused = true;
-    pauseResumeBtn.textContent = '▶';
-  } else {
-    speechSynthesis.resume();
-    isPaused = false;
-    pauseResumeBtn.textContent = '⏸';
-  }
-});
-
-/* =========================
-   Restart
-========================= */
-restartBtn.addEventListener('click', () => {
-  speechSynthesis.cancel();
-  isPaused = false;
-  pauseResumeBtn.textContent = '⏸';
-  readStartBtn.click();
-});
-azqq</script>
 
 <script>
-  window.OVERLAY_ENABLED = false;
-
-  (function(){
-    if (window.OVERLAY_ENABLED === true) return; // <<< stops the overlay from running
-
-    /* =========================================
-       1. RAW TEXT BLOCK — organized by team
-       ========================================= */
-
-    const rawText = (function(){/*
-    ~Team A List~
-    |Team A|11Phapmuan|12Piyanun|13Chinpasut|15Theetat|17Pasit/Patit|
-    |Team A|11Piyawarin|12Thanatphat|13Warawat|15Thanakorn|17Ronnakrit|
-    |Team A|11Thanisorn|12Papon|13Supasan|15Nunthapat|17Thanatthat|
-    |Team A|11Nanon|12Phunakorn|13Kuariwin|15Noppathorn|17Korrerk|
-    |Team A|11Chayakarn|12Sukhaphat|13Patawee|15Krittaphat|17Pothsawee|
-    |Team A|11Arichai|12Athiwat|13Kawinpob|15Pudh|17Korapat|
-    |Team A|11Withawich|12Teerapich|13Chinnawat|15Tanaphat|17Pakorn|
-    |Team A|11Theeraphat|12Akkhardwin|13Phattadon|15Nop|17Tashtada|
-
-    ~Team B List~
-    |Team B|11KornKamol|12Achiravit|13Pavee|15Pitchayapoom|17Denthanat|
-    |Team B|11Karn/Atis|12Puttipat|13Tanaphon|15Pannathorn|17Phurithat|
-    |Team B|11Songsathit|12Wongsapat|13Nathavee|15Thanadech|17Sanant|
-    |Team B|11Prachaya|12Supatat|13Kantaphon|15Supakorn|17Theetat|
-    |Team B|11Thanapat|12Parnasarn|13Kittitee|15Nuttapong|17Kanoknat|
-    |Team B|11Puripat|12Akrit|13Phuthaninphat|15Aritouch|17Krittitee|
-    |Team B|11Papeem|12Techin|13Phupa|15Mangkorn|17Kanapos|
-    */}).toString()
-    .replace(/^[^\/]+\/\*!?/, '')
-    .replace(/\*\/[^\/]+$/, '')
-    .trim();
 
 
-    /* =========================================
-       2. Parse teams
-       ========================================= */
+/* =========================================
+   SECTION DIAL — SCROLL + CLICK ONLY
+   (SECTION-SCOPED, MC-SAFE, AUTO-TRIGGERING)
+   ========================================= */
 
-    const teamA = [];
-    const teamB = [];
-    let currentTeam = null;
+(function () {
 
-    rawText.split(/\r?\n/).forEach(line => {
-      line = line.trim();
-      if (!line) return;
+  const ITEM_HEIGHT = 38;
 
-      if (/~Team A List~/i.test(line)) currentTeam = "A";
-      else if (/~Team B List~/i.test(line)) currentTeam = "B";
-      else if (currentTeam === "A") teamA.push(line.replace(/\//g,"•"));
-      else if (currentTeam === "B") teamB.push(line.replace(/\//g,"•"));
-    });
+  let sections = [];
+  let sectionIndex = 0; // 0 = placeholder
 
-    const allLines = teamA.concat(teamB);
+  let offset = 0;
+  let startY = 0;
+  let dragging = false;
+let isProgrammaticSelect = false;
 
 
-    /* =========================================
-       3. OVERLAY EXCLUSION CONFIG
-       ========================================= */
+  /* ---------- GLOBAL MC POOL (SECTION ONLY) ---------- */
+  window.sectionAnswerPool = [];
 
-    const RAW_EXCLUDED_DIVS = `
-    <div id="dynamicInputsReadingSpeaking">
-    <div id="instructionsContainerReadingSpeaking">
-    <div id="dynamicInputsWritingSpeaking">
-    <div id="instructionsContainerWritingSpeaking">
-    <div id="outputContainerReadingSpeaking">
-    <div id="outputContainerWritingSpeaking">
+  function rebuildMCPool(sectionText) {
+    window.sectionAnswerPool = sectionText
+      .split("\n")
+      .map(line => {
+        const m = line.match(/\|([^|]+)\|/);
+        return m ? m[1] : null;
+      })
+      .filter(Boolean);
+
+    // DEBUG — remove later
+    console.log("MC pool rebuilt (section only):", window.sectionAnswerPool);
+  }
+
+  /* ---------- PARSE SECTIONS (STRICT ~ BOUNDARIES) ---------- */
+  function parseSections(raw) {
+    const chunks = raw.split(/\n(?=~+)/);
+
+    return chunks
+      .map(chunk => chunk.trim())
+      .filter(chunk => chunk.startsWith("~"))
+      .map(chunk => {
+        const lines = chunk.split("\n");
+        const name = lines.shift().replace(/^~+/, "").trim();
+        const text = lines.join("\n").trim();
+        return { name, text };
+      });
+  }
+
+  const parsedSections = parseSections(window.__RAW_SECTION_TEXT__);
+
+
+  sections = [
+    { name: "Select a category.", text: "" },
+    ...parsedSections
+  ];
+
+  /* ---------- BUILD UI ---------- */
+  const container = document.getElementById("sectionWheelContainer");
+
+
+// ▲ / ▼ BUTTONS
+const btnUp = document.getElementById("sectionUp");
+const btnDown = document.getElementById("sectionDown");
+
+btnUp.addEventListener("click", () => {
+  selectSection(sectionIndex - 1, true);
+});
+
+btnDown.addEventListener("click", () => {
+  selectSection(sectionIndex + 1, true);
+});
+  container.style.cssText = `
+    position: relative;
+    height: ${ITEM_HEIGHT}px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    touch-action: pan-y;
+    cursor: pointer;
+  `;
+
+  const wheel = document.createElement("div");
+  wheel.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    will-change: transform;
+  `;
+
+  sections.forEach((sec, index) => {
+    const item = document.createElement("div");
+    item.textContent = sec.name;
+    item.style.cssText = `
+      height: ${ITEM_HEIGHT}px;
+      line-height: ${ITEM_HEIGHT}px;
+      text-align: center;
+      font-size: ${index === 0 ? "14px" : "15px"};
+      font-style: ${index === 0 ? "italic" : "normal"};
+      color: ${index === 0 ? "#999" : "#777"};
+      user-select: none;
+      white-space: nowrap;
     `;
 
-    const OVERLAY_EXCLUSIONS = [
-      ...RAW_EXCLUDED_DIVS.matchAll(/id="([^"]+)"/g)
-    ].map(m => `#${m[1]}`);
+item.addEventListener("click", () => {
+  selectSection(index, true);
+});
 
 
-    /* =========================================
-       4. Overlay engine
-       ========================================= */
+    wheel.appendChild(item);
+  });
 
-    const numberPattern = /^(?:Question\s*)?\d+[\.\)\:\-]/i;
+  container.appendChild(wheel);
 
-    function isExcluded(el) {
-      if (OVERLAY_EXCLUSIONS.some(sel => el.closest(sel))) return true;
-      if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return true;
-      return false;
-    }
+  /* ---------- UPDATE ---------- */
+function update() {
+  wheel.style.transform = `translateY(${offset}px)`;
 
-    function createOverlay(numberEl, line) {
-      if (numberEl.dataset.overlayApplied) return;
-
-      const overlayDiv = document.createElement("div");
-      overlayDiv.style.fontSize = "10px";
-      overlayDiv.style.lineHeight = "10px";
-      overlayDiv.style.color = "#1976d2";
-      overlayDiv.style.fontWeight = "bold";
-      overlayDiv.style.pointerEvents = "none";
-      overlayDiv.style.marginBottom = "2px";
-      overlayDiv.textContent = line;
-
-      numberEl.parentNode.insertBefore(overlayDiv, numberEl);
-      numberEl.dataset.overlayApplied = "1";
-    }
-
-    function scanAndAssignOverlays() {
-      const numberEls = [];
-
-      document.querySelectorAll("body *").forEach(el => {
-        if (isExcluded(el)) return;
-        if (el.childElementCount !== 0) return;
-
-        const text = el.textContent.trim();
-        if (!numberPattern.test(text)) return;
-
-        numberEls.push(el);
-      });
-
-      numberEls.forEach((el, index) => {
-        const line =
-          (teamA.length && teamB.length)
-            ? (index % 2 === 0
-                ? teamA[Math.floor(Math.random() * teamA.length)]
-                : teamB[Math.floor(Math.random() * teamB.length)])
-            : allLines[Math.floor(Math.random() * allLines.length)];
-
-        createOverlay(el, line);
-      });
-    }
-
-
-    /* =========================================
-       5. Run
-       ========================================= */
-
-    scanAndAssignOverlays();
-    setInterval(scanAndAssignOverlays, 700);
-
-  })();
-</script>
-
-
-<script>
-
-const sectionList = `
-readingSection
-writingSectionGhostWriting
-mcSection
-mc2Section
-fibSection
-scrambleSection
-sequenceSection
-posSection
-vocabSection
-footerNoteSection
-copyrightSection
-
-`;
-
-function applySectionVisibility(list) {
-  const lines = list.split('\n').map(line => line.trim()).filter(line => line !== '');
-  
-  lines.forEach(line => {
-    let hide = false;
-    let id = line;
-    if (line.startsWith('~')) {
-      hide = true;
-      id = line.slice(1).trim();
-    }
-    
-    const el = document.getElementById(id);
-    if (el) {
-      // Hide/show the element itself
-      el.style.display = hide ? 'none' : '';
-      // Also hide/show all its child elements
-      if (hide) {
-        el.querySelectorAll('*').forEach(child => child.style.display = 'none');
-      }
+  [...wheel.children].forEach((el, i) => {
+    if (i === sectionIndex && i !== 0) {
+      el.style.color = "#1f5fbf";
+      el.style.fontWeight = "700";
     } else {
-      console.warn(`Element with ID "${id}" not found.`);
+      el.style.color = i === 0 ? "#999" : "#777";
+      el.style.fontWeight = "600";
     }
   });
 }
+  function fireSectionChange() {
+if (sectionIndex === 0) return;
 
-document.addEventListener('DOMContentLoaded', () => {
-  applySectionVisibility(sectionList);
-});
+const section = sections[sectionIndex];
+
+
+    window.sectionSelectionChanged = true;
+
+    // 🔑 BUILD MC POOL HERE
+    rebuildMCPool(section.text);
+
+    window.dispatchEvent(new CustomEvent("sectionchange", {
+      detail: {
+        index: sectionIndex,
+
+        name: section.name,
+        text: section.text
+      }
+    }));
+  }
+
+function snap(fireEvent = false) {
+  // 🔑 CALCULATE INDEX FROM OFFSET
+  const rawIndex = Math.round(-offset / ITEM_HEIGHT);
+  sectionIndex = Math.max(1, Math.min(sections.length - 1, rawIndex));
+
+  offset = -sectionIndex * ITEM_HEIGHT;
+
+  wheel.style.transition = "transform 0.15s ease-out";
+  update();
+  setTimeout(() => wheel.style.transition = "", 150);
+
+  if (fireEvent) {
+    fireSectionChange();
+  }
+}
+
+
+function selectSection(index, fireEvent = true) {
+  sectionIndex = Math.max(1, Math.min(sections.length - 1, index));
+  offset = -sectionIndex * ITEM_HEIGHT;
+  snap(fireEvent);
+}
+
+
+
+
+  /* ---------- DRAG ---------- */
+  function start(y) {
+    dragging = true;
+    startY = y;
+  }
+
+  function move(y) {
+    if (!dragging) return;
+    offset += y - startY;
+    startY = y;
+    update();
+  }
+
+  function end() {
+    if (!dragging) return;
+    dragging = false;
+    snap(true);
+  }
+
+  container.addEventListener("mousedown", e => start(e.clientY));
+  window.addEventListener("mousemove", e => move(e.clientY));
+  window.addEventListener("mouseup", end);
+
+  container.addEventListener("touchstart", e => start(e.touches[0].clientY), { passive: true });
+  container.addEventListener("touchmove", e => move(e.touches[0].clientY), { passive: true });
+  container.addEventListener("touchend", end);
+
+  /* ---------- MOUSE WHEEL ---------- */
+  container.addEventListener("wheel", e => {
+    e.preventDefault();
+    offset += e.deltaY * -0.3;
+    update();
+    snap(true);
+  }, { passive: false });
+
+  /* ---------- INIT ---------- */
+  offset = 0;
+  update();
+
+
+
+
+  /* ---------- SECTION SELECTION BRIDGE ---------- */
+window.getSelectedSectionText = function () {
+  if (sectionIndex === 0) return "";
+  return sections[sectionIndex]?.text || "";
+};
+
+window.getSelectedSectionIndex = function () {
+  return sectionIndex;
+};
+
+
+})();
 </script>
 
 
 <script>
-// ---------------------- UNIVERSAL PIPE-BASED FEEDBACK ----------------------
-document.addEventListener("DOMContentLoaded", () => {
 
-  // --- Web Audio context ---
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  const audioCtx = new AudioContext();
-
-  function playCorrect() {
-    audioCtx.resume().then(() => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.25);
-    });
-  }
-
-  function playWrong() {
-    audioCtx.resume().then(() => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(450, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.25);
-      gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.25);
-    });
-  }
-
-  // --- normalize strings for comparison ---
-  function normalize(str) {
-    return str.trim().toLowerCase().replace(/\s+/g, ' ');
-  }
-
-  // --- feedback for multiple-choice (radio/checkbox) ---
-  function handleSelection(exercise, selectedValues) {
-    const correct = exercise.dataset.correct.split('|').map(normalize);
-    let isCorrect;
-
-    if (exercise.querySelectorAll('input[type="checkbox"]').length > 0) {
-      // Checkbox / multi-select: all selected must match all correct
-      const normalizedSelected = selectedValues.map(normalize).sort();
-      isCorrect = normalizedSelected.join('|') === correct.sort().join('|');
-    } else {
-      // Single choice or fill-in-the-blank
-      isCorrect = normalize(selectedValues[0]) === correct[0];
+async function loadVocab(source) {
+  let text = "";
+  // If it looks like a filename (ends with .txt), fetch it
+  if (source.trim().endsWith(".txt")) {
+    try {
+      const res = await fetch(source.trim());
+      if (!res.ok) throw new Error("Failed to load file");
+      text = await res.text();
+    } catch (err) {
+      console.error("Error loading vocab file:", err);
+      return [];
     }
-
-    // Remove old emoji
-    exercise.querySelectorAll('.mc-emoji').forEach(span => span.remove());
-
-    // Add emoji for radio/checkbox labels
-    exercise.querySelectorAll('input').forEach(input => {
-      const lbl = input.closest('label');
-      if (!lbl) return;
-
-      const inputValue = normalize(input.value || input.value);
-      const span = document.createElement('span');
-      span.className = 'mc-emoji';
-      span.style.marginLeft = "8px";
-      if (input.checked) span.textContent = isCorrect ? "😊" : "😢";
-      else span.textContent = '';
-      lbl.appendChild(span);
-    });
-
-    // Play sound
-    if (isCorrect) playCorrect();
-    else playWrong();
+  } else {
+    // Otherwise treat as raw text
+    text = source;
   }
+  return parseVocabInput(text);
+}
 
-  // --- universal event listener ---
-  document.body.addEventListener('change', e => {
-    const input = e.target;
-    const exercise = input.closest('.exercise');
-    if (!exercise) return;
+// Example usage:
+// ❌ Disabled: section selector now controls vocab loading
+// loadVocab("vocab.txt").then(pairs => {
+//   console.log("Loaded vocab pairs:", pairs);
+// });
 
-    if (input.type === 'radio' || input.type === 'checkbox') {
-      const selected = Array.from(exercise.querySelectorAll('input:checked')).map(inp => inp.value);
-      handleSelection(exercise, selected);
-    } else if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
-      // For FIB / text input: compare value
-      handleSelection(exercise, [input.value]);
-    }
-  });
+// Initialize vocabPairs
 
-  console.log("✅ Universal pipe-based emoji + audio feedback initialized.");
+let studentSentences = [];
+let flashcardIndex = 0;
+
+
+const flashcard = document.getElementById('flashcard');
+const front = flashcard.querySelector('.front');
+const back = flashcard.querySelector('.back');
+const exampleInput = document.getElementById('exampleInput');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const finishBtn = document.getElementById('finishBtn');
+const nameEl = document.getElementById('name');
+const idEl = document.getElementById('studentId');
+const scoreboard = document.getElementById('scoreboard');
+const scoreOutput = document.getElementById('scoreOutput');
+const vocabList = document.getElementById('vocabList');
+const vocabHeader = document.getElementById('vocabHeader');
+
+// Render vocab list
+function renderVocabList() {
+  vocabList.innerHTML = vocabPairs.map(p =>
+    `<li class="read-line">${p.word}: ${p.definition}</li>`
+  ).join('');
+}
+vocabHeader.addEventListener('click', () => {
+  vocabList.style.display = vocabList.style.display === 'none' ? 'block' : 'none';
 });
+
+// Flashcards
+function updateFlashcard() {
+  if (!vocabPairs.length) return;
+
+  front.textContent = vocabPairs[flashcardIndex].word;
+  back.innerHTML = vocabPairs[flashcardIndex].definition;
+  exampleInput.value = studentSentences[flashcardIndex] || '';
+
+  prevBtn.style.display = flashcardIndex === 0 ? "none" : "inline-block";
+  nextBtn.textContent =
+    flashcardIndex === vocabPairs.length - 1 ? "Finish" : "Next";
+
+  flashcard.classList.remove('flipped');
+}
+
+
+function checkInputs() {
+  finishBtn.style.display = 'inline-block';
+}
+
+flashcard.addEventListener('click', () => flashcard.classList.toggle('flipped'));
+exampleInput.addEventListener('input', () =>
+  studentSentences[flashcardIndex] = exampleInput.value.trim()
+);
+
+nameEl.addEventListener('input', checkInputs);
+idEl.addEventListener('input', checkInputs);
+
+prevBtn.addEventListener('click', () => {
+  if (flashcardIndex > 0) {
+    flashcardIndex--;
+    updateFlashcard();
+  }
+});
+nextBtn.addEventListener('click', () => {
+  studentSentences[flashcardIndex] = exampleInput.value.trim();
+
+if (flashcardIndex < vocabPairs.length - 1) {
+  flashcardIndex++;
+  updateFlashcard();
+}
+
+  else { showScoreboard(); }
+});
+// finishBtn.addEventListener('click', showScoreboard);
+
+function showScoreboard() {
+  const name = nameEl.value.trim() || 'Unknown';
+  const sid = idEl.value.trim() || 'N/A';
+  const now = new Date();
+
+  const formattedDate =
+    `${String(now.getDate()).padStart(2,'0')}/` +
+    `${String(now.getMonth()+1).padStart(2,'0')}/` +
+    `${now.getFullYear()} ` +
+    `${String(now.getHours()).padStart(2,'0')}:` +
+    `${String(now.getMinutes()).padStart(2,'0')}:` +
+    `${String(now.getSeconds()).padStart(2,'0')}`;
+
+  // ✅ GET ORIGINAL HTML FILE NAME
+  const fileName = window.location.pathname.split('/').pop() || 'unknown.html';
+
+  // ✅ GET CURRENT SECTION NAME
+  const sectionName =
+    window.getSelectedSectionIndex && window.getSelectedSectionIndex() !== 0
+      ? document.querySelector("#sectionWheelContainer div div:nth-child(" + (window.getSelectedSectionIndex()+1) + ")")?.textContent || "Unknown Section"
+      : "No Section";
+
+  // ✅ NEW HEADER FORMAT
+  let output = `${fileName}|${sectionName}|${name}|${sid}|${formattedDate}\n\n`;
+
+  // KEEP REST THE SAME
+vocabPairs.forEach((p, i) => {
+  const sentence = (studentSentences[i] || "").trim();
+
+  output += `${i+1}. ${sentence ? sentence : '[No response]'}\n`;
+});
+  scoreOutput.textContent = output;
+scoreboard.style.display = 'block';
+
+window.saveResult?.(output);
+
+}
+// Copy / Download / PNG
+document.getElementById('copyBtn').addEventListener('click', ()=> navigator.clipboard.writeText(scoreOutput.textContent).then(()=>alert('Copied!'))); 
+document.getElementById('downloadTextBtn').addEventListener('click', ()=> {
+  const blob = new Blob([scoreOutput.textContent],{type:'text/plain'}); 
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'vocab_sentences.txt'; a.click();
+});
+document.getElementById('downloadPngBtn').addEventListener('click', ()=> {
+  const btnGroup = document.getElementById('scoreBtns'); btnGroup.style.display='none';
+  html2canvas(scoreboard).then(canvas=> { btnGroup.style.display='flex'; const link=document.createElement('a'); link.download='vocab_sentences.png'; link.href=canvas.toDataURL('image/png'); link.click(); });
+});
+
+
 </script>
+
+<script>
+const borderDiv = document.createElement('div');
+borderDiv.style.position = 'fixed';
+borderDiv.style.inset = '0';
+borderDiv.style.border = '10px solid #39FF14';
+borderDiv.style.padding = '20px';
+borderDiv.style.boxSizing = 'border-box';
+borderDiv.style.zIndex = '9999';
+borderDiv.style.pointerEvents = 'none';
+document.body.appendChild(borderDiv);
+</script>
+
+<script>
+(function () {
+  const synth = window.speechSynthesis;
+  let utterance = null;
+  let speaking = false;
+  let paused = false;
+
+  const vocabHeader = document.getElementById("vocabHeader");
+  const vocabList = document.getElementById("vocabList");
+
+  function stripEmojis(text) {
+    return text.replace(/[\p{Emoji}\p{Extended_Pictographic}]/gu, "").trim();
+  }
+
+  function getTextToRead() {
+    if (vocabList.style.display !== "none") {
+      const header = "Vocabulary List. ";
+      const items = [...vocabList.querySelectorAll("li")].map(li => stripEmojis(li.innerText)).join(". ");
+      return header + items;
+    }
+    const word = stripEmojis(document.querySelector("#flashcard .front")?.innerText || "");
+    const def = stripEmojis(document.querySelector("#flashcard .back")?.innerText || "");
+    return `${word}. ${def}`;
+  }
+
+  function createUtterance(text) {
+    if (!text) return null;
+    const u = new SpeechSynthesisUtterance(stripEmojis(text));
+u.rate = 0.75;   // 👈 slower speech (default is 1.0)
+    u.onend = () => { speaking = false; paused = false; };
+    return u;
+  }
+
+  function startReading() {
+    if (paused) { synth.resume(); paused = false; return; }
+    if (!speaking) {
+      const text = getTextToRead();
+      utterance = createUtterance(text);
+      if (!utterance) return;
+      synth.speak(utterance);
+      speaking = true;
+    }
+  }
+
+  function togglePause() { if (!speaking) return; paused ? synth.resume() : synth.pause(); paused = !paused; }
+  function restartReading() { if (speaking) synth.cancel(); paused = false; speaking = false; startReading(); }
+  function stopSpeech() { synth.cancel(); speaking = false; paused = false; }
+  window.stopSpeech = stopSpeech;
+
+  function ensureControlsExist() {
+    const nav = document.getElementById("navButtons");
+    if (!nav) return;
+    let controls = document.getElementById("inlineAudioControls");
+    if (controls) return controls;
+
+    controls = document.createElement("div");
+    controls.id = "inlineAudioControls";
+    controls.style.display = "none";
+    controls.style.gap = "8px";
+    controls.style.marginLeft = "auto";
+    controls.style.alignItems = "center";
+
+/*
+const btns = [
+  { text: "⏮️", title: "Restart", action: restartReading },
+  { text: "⏸️", title: "Pause/Resume", action: togglePause },
+  { text: "▶️", title: "Start", action: startReading }
+];
+*/
+
+    btns.forEach(b => {
+      const btn = document.createElement("button");
+      btn.innerText = b.text;
+      btn.title = b.title;
+      btn.style.padding = "6px 12px";
+      btn.style.fontSize = "14px";
+      btn.style.borderRadius = "6px";
+      btn.style.background = "#1976d2";
+      btn.style.color = "#fff";
+      btn.style.border = "none";
+      btn.style.cursor = "pointer";
+      btn.addEventListener("click", b.action);
+      controls.appendChild(btn);
+    });
+
+    nav.appendChild(controls);
+    return controls;
+  }
+
+  const controls = ensureControlsExist();
+  function syncControls() {
+    const isOpen = vocabList.style.display !== "none";
+    stopSpeech();
+    controls.style.display = isOpen ? "flex" : "none";
+  }
+
+  const observer = new MutationObserver(syncControls);
+  observer.observe(vocabList, { attributes: true, attributeFilter: ["style"] });
+  syncControls();
+
+})();
+</script>
+
+
+<script>
+(async function() {
+  'use strict';
+
+  // Sanitize filenames for download
+  function sanitizeFilename(name) {
+    return name.trim()
+      .replace(/[\\/:*?"<>|]+/g, '_')
+      .replace(/[\r\n]+/g, '_')
+      .slice(0, 200) || 'score';
+  }
+
+  function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 2000);
+  }
+
+  async function downloadScoreAsPNG(text, filename) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = text.replace(/\n/g, '<br>');
+    wrapper.style.whiteSpace = 'pre-wrap';
+    wrapper.style.fontFamily = 'monospace';
+    wrapper.style.padding = '10px';
+    wrapper.style.backgroundColor = '#fff';
+    wrapper.style.color = '#000';
+    document.body.appendChild(wrapper);
+
+    try {
+      const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#fff' });
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      downloadBlob(blob, filename);
+    } catch (err) {
+      console.error(err);
+      alert('PNG download failed');
+    } finally {
+      wrapper.remove();
+    }
+  }
+
+  function hijackButton(button, getScoreText, getFilename, isText) {
+    if (!button) return;
+    const newBtn = button.cloneNode(true);
+    button.parentNode.replaceChild(newBtn, button);
+
+    newBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      const scoreText = getScoreText();
+      if (!scoreText) {
+        alert('No scoreboard data found. Complete the activity first.');
+        return;
+      }
+
+      const filename = sanitizeFilename(getFilename());
+      if (isText) {
+        downloadBlob(new Blob([scoreText], { type: 'text/plain' }), filename + '.txt');
+      } else {
+        await downloadScoreAsPNG(scoreText, filename + '.png');
+      }
+    }, true);
+  }
+
+  // Scoreboard elements
+  const scoreOutput = document.getElementById('scoreOutput');
+  const nameEl = document.getElementById('name');
+  const idEl = document.getElementById('studentId');
+
+  // Function to generate dynamic filename
+  const getFilename = () => {
+    const rawFilename = window.location.pathname.split('/').pop() || 'flashcards';
+    const name = nameEl?.value.trim() || 'Student';
+    const id = idEl?.value.trim() || 'ID';
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2,'0')}${String(now.getMonth()+1).padStart(2,'0')}${now.getFullYear()}`;
+    return `${rawFilename}|${name}|${id}|${dateStr}`;
+  };
+
+  // Hijack buttons
+  const copyBtn = document.getElementById('copyBtn');
+  const downloadTextBtn = document.getElementById('downloadTextBtn');
+  const downloadPngBtn = document.getElementById('downloadPngBtn');
+
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = scoreOutput.textContent.trim();
+      if (!text) { alert('No scoreboard data found.'); return; }
+      navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+    });
+  }
+
+  hijackButton(downloadTextBtn, () => scoreOutput.textContent.trim(), getFilename, true);
+  hijackButton(downloadPngBtn, () => scoreOutput.textContent.trim(), getFilename, false);
+
+})();
+</script>
+
+
+
+
+
 
 
 
@@ -2243,14 +2081,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
 const RAW_TEXT = `
 
-How to play...
+How to use this page...
 
 1. Enter Name and ID.
-2. Select a category.
-3. Click Start to begin.
-4. Select the correct word(s) for each exercise.
-5. Click Submit to see your score.
-6. Copy or download your score.
+2. Select a category to view the main list.
+3. Use the audio controls to hear the main list read aloud.
+4. Click to hide the main list.
+5. Click on the flash cards to show the front or the back.
+5. Click next or previous to go froward or backward through the cards.
+6. Enter example sentences for each word in the text field.
+7. Click Submit to view your example sentences when you are done.
+8. Click to copy or download your example sentences.
 
 `;
 
@@ -2490,7 +2331,6 @@ window.addEventListener("resize", adjustBodyPadding);
 })();
 </script>
 
-
 <script>
 (function() {
   // Prevent pinch-to-zoom
@@ -2518,6 +2358,393 @@ window.addEventListener("resize", adjustBodyPadding);
   document.addEventListener('gesturestart', preventGesture, { passive: false });
 })();
 </script>
+
+<script>
+(function () {
+  const synth = window.speechSynthesis;
+  const finishBtn = document.getElementById("finishBtn");
+
+  let utterance = null;
+  let textNodes = [];
+  let currentIndex = 0;
+  let state = "idle"; // idle | speaking | paused
+
+  /* =========================
+     TEXT SELECTION → NODE MAP
+  ========================= */
+
+function getAllReadableNodes() {
+  const walker = document.createTreeWalker(
+    document.getElementById("readingArea"),
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (node.parentElement.closest("script, style, button, input")) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    return nodes;
+  }
+
+  function findStartIndex(selection) {
+    if (!selection.anchorNode) return 0;
+    return textNodes.findIndex(n => n === selection.anchorNode);
+  }
+
+  /* =========================
+     HIGHLIGHT + SCROLL
+  ========================= */
+
+  let currentHighlight = null;
+
+  function highlightNode(node) {
+    if (!node || !node.parentElement) return;
+
+    if (currentHighlight) {
+      currentHighlight.style.background = "";
+    }
+
+    const el = node.parentElement;
+    el.style.background = "#cce5ff"; // light blue
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    currentHighlight = el;
+  }
+
+  /* =========================
+     SPEECH ENGINE
+  ========================= */
+
+  function speakNext() {
+    if (currentIndex >= textNodes.length) {
+      stop();
+      return;
+    }
+
+    const node = textNodes[currentIndex];
+    const text = node.nodeValue.trim();
+
+    if (!text) {
+      currentIndex++;
+      speakNext();
+      return;
+    }
+
+    highlightNode(node);
+
+    utterance = new SpeechSynthesisUtterance(text);
+
+    utterance.onend = () => {
+      currentIndex++;
+      speakNext();
+    };
+
+    synth.speak(utterance);
+  }
+
+  function startFromSelection() {
+    const selection = window.getSelection();
+
+    if (!selection || selection.isCollapsed) {
+      alert("Select a word first.");
+      return;
+    }
+
+    textNodes = getAllReadableNodes();
+    currentIndex = findStartIndex(selection);
+
+    synth.cancel();
+    state = "speaking";
+    updateButton();
+
+    speakNext();
+  }
+
+  function pause() {
+    synth.pause();
+    state = "paused";
+    updateButton();
+  }
+
+  function resume() {
+    synth.resume();
+    state = "speaking";
+    updateButton();
+  }
+
+  function stop() {
+    synth.cancel();
+    state = "idle";
+    updateButton();
+
+    if (currentHighlight) {
+      currentHighlight.style.background = "";
+      currentHighlight = null;
+    }
+  }
+
+  /* =========================
+     BUTTON STATE MACHINE
+  ========================= */
+
+  function updateButton() {
+    if (state === "idle") finishBtn.textContent = "🔊";
+    if (state === "speaking") finishBtn.textContent = "⏸️";
+    if (state === "paused") finishBtn.textContent = "▶️";
+  }
+
+  finishBtn.addEventListener("click", () => {
+    if (state === "idle") {
+      startFromSelection();
+    } else if (state === "speaking") {
+      pause();
+    } else if (state === "paused") {
+      resume();
+    }
+  });
+
+  /* =========================
+     OPTIONAL: STOP ON NEW SELECTION
+  ========================= */
+
+  document.addEventListener("selectionchange", () => {
+    if (state !== "idle") {
+      stop();
+    }
+  });
+
+  updateButton();
+})();
+</script>
+
+<script>
+(function () {
+
+  /* =========================
+     1. PALE BLUE SELECTION STYLE
+  ========================= */
+  const style = document.createElement("style");
+  style.textContent = `
+    ::selection {
+      background: rgba(140, 190, 255, 0.25); /* very pale blue */
+      color: inherit;
+    }
+
+    ::-moz-selection {
+      background: rgba(140, 190, 255, 0.25);
+      color: inherit;
+    }
+
+    /* remove tap flash */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+  `;
+  document.head.appendChild(style);
+
+  /* =========================
+     2. WORD SELECTION ON CLICK
+  ========================= */
+
+  function selectWord(el, wordIndex) {
+    const text = el.textContent;
+    const words = text.split(/(\s+)/); // keep spaces
+
+    let charStart = 0;
+    let start = 0;
+    let end = 0;
+
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      const len = w.length;
+
+      if (i === wordIndex) {
+        start = charStart;
+        end = charStart + len;
+        break;
+      }
+
+      charStart += len;
+    }
+
+    const range = document.createRange();
+    const textNode = el.firstChild;
+
+    if (!textNode || textNode.nodeType !== 3) return;
+
+    range.setStart(textNode, start);
+    range.setEnd(textNode, end);
+
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  /* =========================
+     3. ATTACH CLICK HANDLER
+  ========================= */
+
+  document.addEventListener("click", function (e) {
+    const target = e.target;
+
+    // only operate on plain text elements
+    if (!target || target.children.length > 0) return;
+
+    const text = target.textContent;
+    if (!text || !text.includes(" ")) return;
+
+    // find clicked word position using caret
+    const range = document.caretRangeFromPoint
+      ? document.caretRangeFromPoint(e.clientX, e.clientY)
+      : null;
+
+    if (!range || !range.startContainer) return;
+
+    const node = range.startContainer;
+    if (node.nodeType !== 3) return;
+
+    const words = text.split(/(\s+)/);
+    let offset = range.startOffset;
+
+    let charCount = 0;
+    let wordIndex = 0;
+
+    for (let i = 0; i < words.length; i++) {
+      charCount += words[i].length;
+      if (offset <= charCount) {
+        wordIndex = i;
+        break;
+      }
+    }
+
+    selectWord(target, wordIndex);
+  });
+
+})();
+</script>
+
+<script>
+(function () {
+
+  /* =========================
+     1. EMOJI STRIPPER (ROBUST)
+  ========================= */
+  function removeEmojis(text) {
+    return text
+      // modern emoji ranges
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+      // variation selectors + modifiers
+      .replace(/\uFE0F/g, "")
+      .replace(/\u200D/g, "")
+      .trim();
+  }
+
+  /* =========================
+     2. WRAP SPEECH SYNTHESIS
+  ========================= */
+
+  const originalSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
+
+  window.speechSynthesis.speak = function (utterance) {
+    if (utterance && utterance.text) {
+      utterance.text = removeEmojis(utterance.text);
+    }
+    return originalSpeak(utterance);
+  };
+
+  /* =========================
+     3. OPTIONAL SAFETY WRAPPER
+     (for direct SpeechSynthesisUtterance usage)
+  ========================= */
+
+  window.createCleanUtterance = function (text, options = {}) {
+    const clean = removeEmojis(text);
+    const u = new SpeechSynthesisUtterance(clean);
+
+    Object.assign(u, options);
+    return u;
+  };
+
+})();
+</script>
+
+<!-- SUPABASE LIBRARY -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+const supabaseClient = window.supabase?.createClient(
+  'https://etwwriloppklhhkmswpr.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
+);
+
+if (!supabaseClient) {
+  console.error("❌ Supabase failed to initialize");
+}
+
+let lastUploadedScore = null;
+
+window.saveResult = async function saveResult(text) {
+
+  if (!supabaseClient) {
+    console.error("❌ No Supabase client");
+    return;
+  }
+
+  // ======================
+  // NORMALIZE INPUT
+  // ======================
+  let cleaned;
+
+  try {
+    cleaned = (typeof text === "string")
+      ? text
+      : JSON.stringify(text);
+
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+  } catch (err) {
+    console.error("❌ Normalize error:", err);
+    return;
+  }
+
+  if (!cleaned) {
+    console.error("❌ Empty value blocked");
+    return;
+  }
+
+  if (cleaned === lastUploadedScore) {
+    console.log("⚠️ Duplicate blocked");
+    return;
+  }
+
+  lastUploadedScore = cleaned;
+
+  console.log("📤 INSERTING INTO scoreboard_raw:", cleaned);
+
+  const { data, error } = await supabaseClient
+    .from("scoreboard_raw")
+    .insert([
+      { result_text: cleaned }
+    ])
+    .select();
+
+  if (error) {
+    console.error("❌ INSERT FAILED FULL ERROR:", error);
+    return;
+  }
+
+  console.log("✅ INSERT SUCCESS:", data);
+};
+
+</script>
+
+
 
 </body>
 </html>
