@@ -1990,48 +1990,13 @@ window.saveResult = async function saveResult(text) {
   console.log("📤 INSERTING:", cleaned);
 
   // Parse existing score line
-  const parts = cleaned.split("|");
-
-  const file_name      = parts[0] || "";
-  const category       = parts[1] || "";
-  const student_name   = parts[2] || "";
-  const student_id     = parts[3] || "";
-  const datetime       = parts[4] || "";
-
-  let score_correct = null;
-  let score_total   = null;
-  let score_percent = null;
-
-  // Parse 12/30
-  if (parts[5]) {
-
-    const scoreMatch = parts[5].match(/^(\d+)\/(\d+)$/);
-
-    if (scoreMatch) {
-      score_correct = Number(scoreMatch[1]);
-      score_total   = Number(scoreMatch[2]);
-    }
-  }
-
-  // Parse 40%
-  if (parts[6]) {
-
-    const pctMatch = parts[6].match(/^(\d+)%$/);
-
-    if (pctMatch) {
-      score_percent = Number(pctMatch[1]);
-    }
-  }
-
-  const { data, error } = await supabaseClient
+const { data, error } = await supabaseClient
   .from("scoreboard_raw")
   .insert([
     {
-      result_text: cleaned
+      result_text: scoreboard.textContent
     }
-  ])
-  .select();
-
+  ]);
 if (error) {
   console.error("❌ INSERT FAILED:", error);
   alert("❌ INSERT FAILED:\n" + error.message);
