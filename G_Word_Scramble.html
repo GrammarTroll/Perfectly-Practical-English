@@ -2009,17 +2009,11 @@ document.getElementById('scrambleSubmitBtn').addEventListener('click', async () 
   scoreOutput.textContent = scoreText;
   document.getElementById('scrambleScoreboard').style.display = 'block';
 
-try {
-  await window.saveResult(scoreText, id);
+await window.saveResult(scoreText, id);
 
-  window.scrambleSubmitted = true;
-  document.getElementById('scrambleSubmitBtn').disabled = true;
+window.scrambleSubmitted = true;
+document.getElementById('scrambleSubmitBtn').disabled = true;
 
-} catch (err) {
-  console.error("Save failed:", err);
-  alert("Save failed: " + err.message);
-  return;
-}
   // lock ONLY after successful Supabase save
 // document.getElementById('scrambleSubmitBtn').disabled = true;
 });
@@ -2062,7 +2056,7 @@ const highlightBtn = document.getElementById('highlightSelected');
 const copyBtn = document.getElementById('copySelected');
 const restartBtn = document.getElementById('restartBtn');
 const pauseResumeBtn = document.getElementById('pauseResumeBtn');
-const speechStartBtn = document.getElementById('startBtn');
+const startBtn = document.getElementById('startBtn');
 
 /* =========================
    State & Voices
@@ -2228,7 +2222,7 @@ function speakDialog(text) {
 /* =========================
    START
 ========================= */
-speechStartBtn.addEventListener('click', () => {
+startBtn.addEventListener('click', () => {
   speechSynthesis.cancel();
   isPaused = false;
   pauseResumeBtn.textContent = '⏸';
@@ -2945,7 +2939,6 @@ window.addEventListener("resize", adjustBodyPadding);
 <script>
 
 let supabaseClient = null;
-window.supabaseReady = false;
 
 try {
   if (!window.supabase || !window.supabase.createClient) {
@@ -2957,8 +2950,6 @@ try {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dyaWxvcHBrbGhoa21zd3ByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDM3NTcsImV4cCI6MjA5NDExOTc1N30.rmquTqYW6WqS7jZUbHM_gWecka3jkiWzYb14eJ10hpQ'
   );
 
-  window.supabaseReady = true;
-
   console.log("✅ Supabase client initialized:", !!supabaseClient);
 
 } catch (err) {
@@ -2966,54 +2957,38 @@ try {
   supabaseClient = null;
 }
 
+
 /* =========================
    SAVE RESULT (GLOBAL SAFE)
    ========================= */
 
 window.saveResult = async function (text, id = null) {
-  if (!window.supabaseReady || !supabaseClient) {
-    throw new Error("Supabase not initialized yet");
+
+  let cleaned;
+
+  try {
+    cleaned = String(text)
+      .replace(/\s+/g, " ")
+      .trim();
+  } catch (err) {
+    console.error("❌ Normalize error:", err);
+    return;
   }
 
-  const cleaned = String(text)
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!cleaned) {
-    throw new Error("Empty payload");
+  // HARD SAFETY GATE
+  if (!cleaned || !supabaseClient) {
+    console.error("❌ Blocked: empty value or Supabase not ready");
+    return;
   }
-
-  console.log("📤 INSERTING:", cleaned);
-
-  const client = window.supabaseClient || supabaseClient;
-
-const { data, error } = await client
-    .from("scoreboard_raw")
-    .insert([
-      {
-        result_text: cleaned,
-        student_id: id || null
-      }
-    ])
-    .select();
-
-  if (error) {
-    console.error("❌ SUPABASE ERROR:", error);
-    throw error;
-  }
-
-  console.log("✅ SAVED:", data);
-  return data;
-};
 
   /* =========================
      STRONG DEDUPE (single source of truth)
      ========================= */
-  window.__lastUploadKey ||= null;
+  window.__lastUploadKey ||= "";
 
   const uploadKey = cleaned;
 
-  if (window.__lastUploadKey && uploadKey === window.__lastUploadKey) {
+  if (uploadKey === window.__lastUploadKey) {
     console.log("⚠️ Duplicate blocked");
     return;
   }
@@ -3026,7 +3001,6 @@ const { data, error } = await client
      SUPABASE INSERT
      ========================= */
   const { data, error } = await supabaseClient
-if (error) throw error;
     .from("scoreboard_raw")
     .insert([
       {
