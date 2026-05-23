@@ -1241,47 +1241,49 @@ async function initTiles() {
 
 document.getElementById("submitBtn").addEventListener("click", async () => {
 
+  // 🔒 HARD LOCK (must be first)
   if (hasSubmittedScore) return;
-
-  gameActive = false;
-
-scoreboard.style.display = "block";
-scoreButtons.style.display = "flex";
-
-updateScoreboard();
-
-/* 🔑 FORCE DOM FLUSH BEFORE READING */
-scoreboard.offsetHeight;
-
-/* STABLE SNAPSHOT */
-const renderedScore = String(scoreboard.textContent || "").trim();
-
-console.log("📤 SENDING:", renderedScore);
-
-if (!renderedScore) {
-  throw new Error("Scoreboard is empty");
-}
-
-try {
-
-  document.getElementById("submitBtn").disabled = true;
-
-  const result = await saveResult(renderedScore);
-
-  console.log("DB RESULT:", result);
-
   hasSubmittedScore = true;
 
-} catch (err) {
+  try {
 
-  document.getElementById("submitBtn").disabled = false;
+    // 1. GAME OVER FIRST
+    gameActive = false;
 
-  console.error(err);
+    // 2. RENDER FINAL SCOREBOARD
+    scoreboard.style.display = "block";
+    scoreButtons.style.display = "flex";
 
-  alert("Upload failed\n\n" + err.message);
-}
+    updateScoreboard();
+
+    // 3. FREEZE EXACT RENDERED VALUE
+    const renderedScore = (scoreboard.textContent || "").trim();
+
+    console.log("📤 SENDING:", renderedScore);
+
+    if (!renderedScore) {
+      throw new Error("Scoreboard is empty");
+    }
+
+    // 4. LOCK UI BEFORE NETWORK CALL
+    document.getElementById("submitBtn").disabled = true;
+
+    // 5. SEND TO SUPABASE (FINAL STEP)
+    const result = await saveResult(renderedScore);
+
+    console.log("DB RESULT:", result);
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert("Upload failed\n\n" + err.message);
+
+    // allow retry ONLY on failure
+    hasSubmittedScore = false;
+    document.getElementById("submitBtn").disabled = false;
+  }
 });
-
   // Copy score
   document.getElementById('copyScore').addEventListener('click', () => {
     navigator.clipboard.writeText(scoreboard.textContent)
