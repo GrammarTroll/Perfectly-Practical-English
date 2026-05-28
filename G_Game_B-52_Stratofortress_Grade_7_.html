@@ -255,15 +255,56 @@ button:disabled {
     z-index: 2;
     display: none;  /* 🔒 hides it without breaking JS */
 }
-#plane { position:absolute; bottom:70px; font-size:90px; color:#6B8E23; transform:rotate(-90deg); user-select:none; pointer-events:none; transition:left 0.05s linear; z-index:3; display:none; }
-#planeShadow { position:absolute; bottom:60px; font-size:90px; color: rgba(0,0,0,0.3); transform:rotate(-90deg); user-select:none; pointer-events:none; filter: blur(6px); transition:left 0.05s linear, bottom 0.05s linear; z-index:2; display:none; }
-#typingInput { position:fixed; left:5px; top:5px; width:24px; height:24px; opacity:0; pointer-events:none; background:transparent; border:none; z-index:9999; font-size:18px; color:black; caret-color:transparent; }
+#plane {
+    position:absolute;
+    bottom:70px;
+    width:120px;
+    height:auto;
+    transform:rotate(-90deg);
+    user-select:none;
+    pointer-events:none;
+    transition:left 0.05s linear;
+    z-index:3;
+    display:none;
+}
+
+#planeShadow {
+    position:absolute;
+    bottom:60px;
+    width:120px;
+    height:auto;
+    transform:rotate(-90deg);
+    user-select:none;
+    pointer-events:none;
+    filter: brightness(0) blur(6px);
+    opacity:0.35;
+    transition:left 0.05s linear, bottom 0.05s linear;
+    z-index:2;
+    display:none;
+}
+
+#typingInput {
+    position:fixed;
+    left:5px;
+    top:5px;
+    width:24px;
+    height:24px;
+    opacity:0;
+    pointer-events:none;
+    background:transparent;
+    border:none;
+    z-index:9999;
+    font-size:18px;
+    color:black;
+    caret-color:transparent;
+}
+
 footer {
-    margin-top: 8px;          /* was 16px */
-    padding: 4px 8px;         /* was 10px 12px */
+    margin-top: 8px;
+    padding: 4px 8px;
     text-align: left;
-    font-size: 13px;          /* slightly smaller */
-    line-height: 1.2;         /* 🔑 reduces height */
+    font-size: 13px;
+    line-height: 1.2;
     color: #666;
     background: #f0f8ff;
     border-radius: 6px;
@@ -376,8 +417,8 @@ footer {
     <canvas id="terrainCanvas"></canvas>
     <div id="frostPanel"></div>
     <div id="typedDisplay"></div>
-    <div id="plane">✈</div>
-    <div id="planeShadow">✈</div>
+<img id="plane" src="B52.png" alt="Plane">
+<img id="planeShadow" src="B52.png" alt="Plane Shadow">
 
 <!-- MC buttons inside game area -->
 <div id="mcPanelExtra"></div>
@@ -620,6 +661,8 @@ Dolphins |will survive| in protected areas.
 We |will buy| recycled things.
 My brother |is going to turn off| the light.
 I think sea ice |will melt|.
+
+
 
 `;
 </script>
