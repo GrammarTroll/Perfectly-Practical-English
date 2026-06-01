@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Perfectly Practical English™</title>
+
 <style>
   * { box-sizing: border-box; }
 
@@ -21,7 +22,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px; /* breathing room from green border */
+    padding: 10px;
     gap: 8px;
   }
 
@@ -33,538 +34,282 @@
     gap: 8px;
   }
 
-h1 {
-  font-size: 20px;
-  margin: 0 0 4px 0;
-  color: #222;
-  text-align: left;
-}
+  h1 {
+    font-size: 20px;
+    margin: 0;
+    color: #222;
+  }
 
-#thread {
-  flex: 1;
-  max-height: 300px;
-  min-height: 300px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  border: 2px solid #39FF14;
-  border-radius: 6px;
-  padding: 10px;
-  background: #fafafa;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-}
+  /* THREAD (SUPABASE DISPLAY) */
+  #thread {
+    height: 300px;
+    overflow-y: auto;
+    border: 2px solid #39FF14;
+    border-radius: 6px;
+    padding: 10px;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+  }
 
-#thread p {
-  margin: 0;
-  padding: 0;
-}
+  .post {
+    border-bottom: 1px solid #ddd;
+    padding: 6px 0;
+  }
 
-.post {
-  border-bottom: 1px solid #ddd;
-  padding: 6px 0;
-}
+  .postHeader {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #444;
+  }
 
-.postHeader {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #444;
-}
+  .postName {
+    font-weight: bold;
+    color: #222;
+  }
 
-.postName {
-  font-weight: bold;
-  color: #222;
-}
+  .postBody {
+    font-size: 15px;
+    margin-top: 4px;
+    white-space: pre-wrap;
+  }
 
-.postBody {
-  font-size: 15px;
-  margin-top: 4px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
+  /* ROW: NAME + ID + POST */
+  #inputRow {
+    display: flex;
+    gap: 6px;
+  }
 
-#messageInput {
-  width: 100%;
-  min-height: 60px;
-  resize: vertical;
-  padding: 8px;
-  font-size: 15px;
-  border-radius: 6px;
-  border: 1px solid #aaa;
-}
+  #nameInput, #idInput {
+    width: 140px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #aaa;
+  }
 
-#inputRow {
-  display: flex;
-  gap: 6px;
-  flex-wrap: nowrap;
-}
+  #postBtn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    background: #007aff;
+    color: white;
+    cursor: pointer;
+  }
 
-#inputRow input#nameInput {
-  width: 155px;
-}
+  /* MESSAGE INPUT */
+  #messageInput {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #aaa;
+    font-size: 15px;
+  }
 
-#inputRow input#idInput {
-  width: 155px;
-}
+  /* SPEECH CONTROLS */
+  #speechRow {
+    display: flex;
+    gap: 6px;
+  }
 
-#inputRow button {
-  padding: 8px 12px;
-  font-size: 14px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background-color: #007aff;
-  color: white;
-  flex: 0 0 auto;
-}
+  #startBtn, #stopBtn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+  }
 
-footer {
-  font-size: 10px;
-  color: #666;
-  text-align: center;
-  padding: 5px 0;
-}
+  #startBtn { background: #2ecc71; }
+  #stopBtn { background: #e74c3c; }
 
-#thread::-webkit-scrollbar { display: none; }
+  #status {
+    font-size: 12px;
+    color: #444;
+  }
+
+  /* NEON BORDER */
+  #border {
+    position: fixed;
+    inset: 0;
+    border: 10px solid #39FF14;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
 </style>
 </head>
+
 <body>
 
+<div id="border"></div>
+
 <div class="container">
+
   <h1>Comments Section</h1>
 
+  <!-- 1. THREAD (SUPABASE OUTPUT) -->
   <div id="thread"></div>
 
-  <textarea id="messageInput" placeholder="Type your message…"></textarea>
-
+  <!-- 2. NAME + ID + POST -->
   <div id="inputRow">
     <input id="nameInput" placeholder="Name">
     <input id="idInput" placeholder="ID">
     <button id="postBtn">Post</button>
   </div>
+
+  <!-- 3. MESSAGE INPUT -->
+  <textarea id="messageInput" placeholder="Type your message…"></textarea>
+
+  <!-- 4. SPEECH -->
+  <div id="status"></div>
+
+  <div id="speechRow">
+    <button id="startBtn">Start</button>
+    <button id="stopBtn">Stop</button>
+  </div>
+
 </div>
 
-<footer>
-  <p>© 2026 Perfectly Practical English™. All rights reserved.</p>
-</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script type="module">
+<script>
+const supabaseClient = supabase.createClient(
+  "https://etwwriloppklhhkmswpr.supabase.co",
+  "YOUR_ANON_KEY"
+);
+
+/* ELEMENTS */
 const thread = document.getElementById("thread");
+
 const nameInput = document.getElementById("nameInput");
 const idInput = document.getElementById("idInput");
 const msgInput = document.getElementById("messageInput");
+
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
 const postBtn = document.getElementById("postBtn");
-const API_URL = "/.netlify/functions/comments";
 
-// Keep track of scroll position
-let lastScrollTop = 0;
+const statusBox = document.getElementById("status");
 
-function addPostToDOM(post) {
+/* SPEECH */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+
+recognition.continuous = true;
+recognition.interimResults = true;
+recognition.lang = "en-US";
+
+recognition.onresult = (event) => {
+  let text = "";
+  for (let i = 0; i < event.results.length; i++) {
+    text += event.results[i][0].transcript + " ";
+  }
+  msgInput.value = text.trim();
+};
+
+recognition.onerror = (e) => {
+  statusBox.textContent = "Speech error: " + e.error;
+};
+
+/* START / STOP */
+startBtn.onclick = () => {
+  recognition.start();
+  statusBox.textContent = "Recording...";
+};
+
+stopBtn.onclick = () => {
+  recognition.stop();
+  statusBox.textContent = "Stopped";
+};
+
+/* THREAD RENDER */
+function renderPost(p) {
   const div = document.createElement("div");
   div.className = "post";
   div.innerHTML = `
     <div class="postHeader">
-      <span class="postName">${post.name} (${post.student_id})</span>
-      <span class="postTime">${post.time}</span>
+      <span class="postName">${p.name} (${p.student_id})</span>
+      <span>${p.time}</span>
     </div>
-    <div class="postBody">${post.message.replace(/\n/g, "<br>")}</div>
+    <div class="postBody">${p.message}</div>
   `;
-  thread.appendChild(div);
+  thread.prepend(div);
 }
 
+/* TIME */
 function timeStamp() {
-  const d = new Date();
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 }
 
-function currentDate() {
-  return new Date().toISOString().slice(0,10);
-}
+/* POST → SUPABASE */
+postBtn.onclick = async () => {
 
-// Load comments while preserving scroll position
-async function loadComments() {
-  try {
-    const res = await fetch(API_URL);
-    if (!res.ok) throw new Error("Failed to load comments");
-    const data = await res.json();
+  const payload = {
+    name: nameInput.value || "Anonymous",
+    student_id: idInput.value || "-",
+    time: timeStamp(),
+    message: msgInput.value || ""
+  };
 
-    // Save current scroll position
-    lastScrollTop = thread.scrollTop;
+  if (!payload.message.trim()) return;
 
-    thread.innerHTML = "";
-    data.forEach(addPostToDOM);
+  renderPost(payload);
 
-    // Restore scroll position
-    thread.scrollTop = lastScrollTop;
-  } catch (err) {
-    console.error("Load error:", err);
-    thread.innerHTML = "<p>Unable to load messages</p>";
-  }
-}
-
-async function postMessage() {
-  const name = nameInput.value.trim() || "Anonymous";
-  const student_id = idInput.value.trim() || "-";
-  const message = msgInput.value.trim();
-  const date = currentDate();
-  if (!message) return;
-
-  const newPost = { name, student_id, date, time: timeStamp(), message };
-
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newPost)
+  const { error } = await supabaseClient
+    .from("instant_input")
+    .insert({
+      entry: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error("Failed to post");
-    const saved = await res.json();
-    addPostToDOM(saved);
-  } catch (err) {
-    console.error("Post error:", err);
-    addPostToDOM(newPost);
+
+  if (error) {
+    statusBox.textContent = "❌ " + error.message;
+  } else {
+    statusBox.textContent = "Saved";
+    msgInput.value = "";
   }
+};
 
-  msgInput.value = "";
-}
-
-postBtn.addEventListener("click", postMessage);
-msgInput.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    postMessage();
-  }
-});
-
-// Periodically refresh without changing scroll position
-loadComments();
-setInterval(loadComments, 2000);
 </script>
 
 <script>
-// Green border around layout
-const borderDiv = document.createElement('div');
-borderDiv.style.position = 'fixed';
-borderDiv.style.inset = '0';
-borderDiv.style.border = '10px solid #39FF14';
-borderDiv.style.pointerEvents = 'none';
-borderDiv.style.boxSizing = 'border-box';
-borderDiv.style.zIndex = '9999';
-document.body.appendChild(borderDiv);
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    // Get filename only
-    let filename = window.location.pathname.split("/").pop();
-
-    // Remove .html
-    filename = filename.replace(/\.html$/i, "");
-
-    // Remove everything up to and including the first underscore
-    // (treats that as the prefix)
-    filename = filename.replace(/^[^_]*_/, "");
-
-    // Convert underscores to spaces
-    const title = filename.replace(/_/g, " ");
-
-    // Replace the first <h1>
-    const h1 = document.querySelector("h1");
-    if (h1) {
-        h1.textContent = title;
-    }
-});
-</script>
-
-<script>
-
-(function(){
-
 /* =========================
-   RAW INSTRUCTIONS TEXT
+   THREAD LOADER (SINGLE SOURCE OF TRUTH)
 ========================= */
 
-const RAW_TEXT = `
+async function loadThread() {
 
-How to play...
+  const { data, error } = await supabaseClient
+    .from("instant_input")
+    .select("entry")
+    .order("id", { ascending: false });
 
-1. Enter Name and ID.
-2. Enter your responses to the posted discussion questions here.
-3. Click Post to send your responses.
-
-`;
-
-
-/* =========================
-   RAW TEXT PARSER
-========================= */
-
-function parseRawInstructions(text){
-
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const html = [];
-
-  lines.forEach(line => {
-
-    if(line === "---"){
-      html.push(`<hr>`);
-      return;
-    }
-
-    if(/^\d+\./.test(line)){
-      html.push(`<p>${line}</p>`);
-      return;
-    }
-
-    if(!/[.!?:]$/.test(line)){
-      html.push(`<h3>${line}</h3>`);
-      return;
-    }
-
-    html.push(`<p>${line}</p>`);
-  });
-
-  return html.join("");
-}
-
-
-/* =========================
-   CREATE STYLE
-========================= */
-
-const style = document.createElement("style");
-
-style.textContent = `
-#instructionsBtn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  padding:10px 16px;
-  background:#2e8b57;
-  color:#fff;
-  border:none;
-  border-radius:6px;
-  font-weight:600;
-  cursor:pointer;
-  box-shadow:0 4px 8px rgba(0,0,0,0.6);
-  z-index:99998;
-}
-
-#instructionsBtn:hover{
-  background:#257047;
-}
-
-#instructionsRoot{
-  position:fixed;
-  inset:0;
-  display:none;
-  z-index:99999;
-}
-
-#instructionsBackdrop{
-  position:absolute;
-  inset:0;
-  background:rgba(0,0,0,.35);
-}
-
-#instructionsModal{
-  position:absolute;
-  top:25px;
-  left:50%;
-  transform:translateX(-50%);
-  width:min(650px,90vw);
-  max-height:90vh;
-  background:#fff;
-  border-radius:10px;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-
-#instructionsHeader{
-  padding:12px 16px;
-  border-bottom:1px solid #ddd;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-#instructionsTitle{
-  color:#1976d2;
-  font-weight:600;
-  font-size:1.1em;
-}
-
-#instructionsBack{
-  border:none;
-  background:none;
-  font-size:20px;
-  cursor:pointer;
-  color:#1976d2;
-  font-weight:600;
-}
-
-#instructionsContent{
-  padding:2px 18px 18px 18px;
-  overflow-y:auto;
-  line-height:1.6;
-  scrollbar-width:none;
-  -ms-overflow-style:none;
-}
-
-#instructionsContent::-webkit-scrollbar{
-  display:none;
-}
-
-#instructionsContent h3{
-  color:#1976d2;
-  margin:12px 0 4px 0;
-  font-weight:600;
-}
-
-#instructionsContent p{
-  margin:4px 0;
-}
-
-#instructionsContent hr{
-  margin:12px 0;
-}
-`;
-
-document.head.appendChild(style);
-
-
-/* =========================
-   CREATE BUTTON
-========================= */
-
-const btn = document.createElement("button");
-btn.id = "instructionsBtn";
-btn.textContent = "Instructions";
-
-document.body.appendChild(btn);
-
-
-/* =========================
-   CREATE MODAL
-========================= */
-
-const root = document.createElement("div");
-root.id = "instructionsRoot";
-
-root.innerHTML = `
-<div id="instructionsBackdrop"></div>
-
-<div id="instructionsModal">
-
-  <div id="instructionsHeader">
-    <button id="instructionsBack">←</button>
-    <span id="instructionsTitle">Instructions</span>
-  </div>
-
-  <div id="instructionsContent">
-    ${parseRawInstructions(RAW_TEXT)}
-  </div>
-
-</div>
-`;
-
-document.body.appendChild(root);
-
-
-/* =========================
-   SCROLL LOCK
-========================= */
-
-const modalContent = document.getElementById("instructionsContent");
-
-modalContent.addEventListener("wheel", e=>{
-  e.stopPropagation();
-},{passive:false});
-
-modalContent.addEventListener("touchmove", e=>{
-  e.stopPropagation();
-},{passive:false});
-
-
-/* =========================
-   OPEN / CLOSE
-========================= */
-
-function openModal(){
-  root.style.display="block";
-  document.body.style.overflow="hidden";
-  document.documentElement.style.overflow="hidden";
-}
-
-function closeModal(){
-  root.style.display="none";
-  document.body.style.overflow="";
-  document.documentElement.style.overflow="";
-}
-
-btn.onclick = openModal;
-
-document.getElementById("instructionsBack").onclick = closeModal;
-document.getElementById("instructionsBackdrop").onclick = closeModal;
-
-document.addEventListener("keydown", e=>{
-  if(e.key==="Escape") closeModal();
-});
-
-/* =========================
-   DYNAMIC BODY PADDING FOR BUTTON
-========================= */
-
-function adjustBodyPadding(){
-  const btnHeight = btn.offsetHeight + -25; // include some gap
-  document.body.style.paddingBottom = `${btnHeight}px`;
-}
-
-// Initial adjustment
-adjustBodyPadding();
-
-// Update if window is resized (responsive)
-window.addEventListener("resize", adjustBodyPadding);
-
-})();
-</script>
-
-<script>
-(function() {
-  // Prevent pinch-to-zoom
-  function preventPinch(e) {
-    if (e.touches.length > 1) e.preventDefault();
+  if (error) {
+    console.error("Load error:", error);
+    return;
   }
 
-  // Prevent double-tap zoom
-  let lastTouchTime = 0;
-  function preventDoubleTap(e) {
-    const now = Date.now();
-    if (now - lastTouchTime < 300) {
-      e.preventDefault();
+  thread.innerHTML = "";
+
+  for (const row of data) {
+    try {
+      const post = JSON.parse(row.entry);
+      renderPost(post);
+    } catch (e) {
+      console.warn("Bad row:", row.entry);
     }
-    lastTouchTime = now;
   }
+}
 
-  // Block gesture events on iOS
-  function preventGesture(e) {
-    e.preventDefault();
-  }
+/* INITIAL LOAD */
+loadThread();
 
-  document.addEventListener('touchstart', preventPinch, { passive: false });
-  document.addEventListener('touchend', preventDoubleTap, { passive: false });
-  document.addEventListener('gesturestart', preventGesture, { passive: false });
-})();
+/* AUTO REFRESH */
+setInterval(loadThread, 5000);
 </script>
 
 </body>
 </html>
-
-
-
-
-
-

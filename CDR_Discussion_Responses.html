@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Perfectly Practical English™</title>
+<title>Classroom Thread Display</title>
+
 <style>
   * { box-sizing: border-box; }
 
@@ -19,293 +20,143 @@
 
   body {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px; /* breathing room from green border */
-    gap: 8px;
+    justify-content: center;
+    padding: 10px;
   }
 
   .container {
     width: 100%;
-    max-width: 375px;
+    max-width: 800px;
+  }
+
+  h1 {
+    font-size: 20px;
+    margin: 0 0 10px 0;
+    color: #222;
+  }
+
+  /* THREAD DISPLAY */
+  #thread {
+    height: 90vh;
+    overflow-y: auto;
+    border: 2px solid #39FF14;
+    border-radius: 6px;
+    padding: 12px;
+    background: #fafafa;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
 
-h1 {
-  font-size: 20px;
-  margin: 0 0 4px 0;
-  color: #222;
-  text-align: left;
-}
+  .post {
+    border-bottom: 1px solid #ddd;
+    padding: 8px 0;
+  }
 
-#thread {
-  flex: 1;
-  max-height: 300px;
-  min-height: 300px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  border: 2px solid #39FF14;
-  border-radius: 6px;
-  padding: 10px;
-  background: #fafafa;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-}
+  .postHeader {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #444;
+  }
 
-#thread p {
-  margin: 0;
-  padding: 0;
-}
+  .postName {
+    font-weight: bold;
+    color: #222;
+  }
 
-.post {
-  border-bottom: 1px solid #ddd;
-  padding: 6px 0;
-}
+  .postBody {
+    font-size: 16px;
+    margin-top: 4px;
+    white-space: pre-wrap;
+  }
 
-.postHeader {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #444;
-}
+  /* CLEAN SCROLLBAR (optional aesthetic) */
+  #thread::-webkit-scrollbar {
+    width: 8px;
+  }
 
-.postName {
-  font-weight: bold;
-  color: #222;
-}
-
-.postBody {
-  font-size: 15px;
-  margin-top: 4px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
-
-#messageInput {
-  width: 100%;
-  min-height: 60px;
-  resize: vertical;
-  padding: 8px;
-  font-size: 15px;
-  border-radius: 6px;
-  border: 1px solid #aaa;
-}
-
-#inputRow {
-  display: flex;
-  gap: 6px;
-  flex-wrap: nowrap;
-}
-
-#inputRow input#nameInput {
-  width: 155px;
-}
-
-#inputRow input#idInput {
-  width: 155px;
-}
-
-#inputRow button {
-  padding: 8px 12px;
-  font-size: 14px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background-color: #007aff;
-  color: white;
-  flex: 0 0 auto;
-}
-
-footer {
-  font-size: 10px;
-  color: #666;
-  text-align: center;
-  padding: 5px 0;
-}
-
-#thread::-webkit-scrollbar { display: none; }
+  #thread::-webkit-scrollbar-thumb {
+    background: #39FF14;
+    border-radius: 10px;
+  }
 </style>
 </head>
+
 <body>
 
 <div class="container">
-  <h1>Comments Section</h1>
-
+  <h1>Live Class Thread</h1>
   <div id="thread"></div>
+</div>
 
-  <textarea id="messageInput" placeholder="Type your message…"></textarea>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!--   <div id="inputRow">
-    <input id="nameInput" placeholder="Name">
-    <input id="idInput" placeholder="ID">
-    <button id="postBtn">Post</button>
-  </div>
-</div> -->
+<script>
+const supabaseClient = supabase.createClient(
+  "https://etwwriloppklhhkmswpr.supabase.co",
+  "YOUR_ANON_KEY"
+);
 
-<footer>
-  <p>© 2026 Perfectly Practical English™. All rights reserved.</p>
-</footer>
-
-<script type="module">
 const thread = document.getElementById("thread");
-const nameInput = document.getElementById("nameInput");
-const idInput = document.getElementById("idInput");
-const msgInput = document.getElementById("messageInput");
-const postBtn = document.getElementById("postBtn");
-const API_URL = "/.netlify/functions/comments";
 
-// Keep track of scroll position
-let lastScrollTop = 0;
-
-function addPostToDOM(post) {
+/* RENDER */
+function renderPost(p) {
   const div = document.createElement("div");
   div.className = "post";
-  div.innerHTML = `
-    <div class="postHeader">
-      <span class="postName">${post.name} (${post.student_id})</span>
-      <span class="postTime">${post.time}</span>
-    </div>
-    <div class="postBody">${post.message.replace(/\n/g, "<br>")}</div>
-  `;
+
+  const header = document.createElement("div");
+  header.className = "postHeader";
+
+  const name = document.createElement("span");
+  name.className = "postName";
+  name.textContent = `${p.name} (${p.student_id})`;
+
+  const time = document.createElement("span");
+  time.textContent = p.time;
+
+  header.appendChild(name);
+  header.appendChild(time);
+
+  const body = document.createElement("div");
+  body.className = "postBody";
+  body.textContent = p.message;
+
+  div.appendChild(header);
+  div.appendChild(body);
+
   thread.appendChild(div);
 }
 
-function timeStamp() {
-  const d = new Date();
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+/* LOAD THREAD */
+async function loadThread() {
 
-function currentDate() {
-  return new Date().toISOString().slice(0,10);
-}
+  const { data, error } = await supabaseClient
+    .from("instant_input")
+    .select("entry")
+    .order("id", { ascending: false });
 
-// Load comments while preserving scroll position
-async function loadComments() {
-  try {
-    const res = await fetch(API_URL);
-    if (!res.ok) throw new Error("Failed to load comments");
-    const data = await res.json();
-
-    // Save current scroll position
-    lastScrollTop = thread.scrollTop;
-
-    thread.innerHTML = "";
-    data.forEach(addPostToDOM);
-
-    // Restore scroll position
-    thread.scrollTop = lastScrollTop;
-  } catch (err) {
-    console.error("Load error:", err);
-    thread.innerHTML = "<p>Unable to load messages</p>";
-  }
-}
-
-async function postMessage() {
-  const name = nameInput.value.trim() || "Anonymous";
-  const student_id = idInput.value.trim() || "-";
-  const message = msgInput.value.trim();
-  const date = currentDate();
-  if (!message) return;
-
-  const newPost = { name, student_id, date, time: timeStamp(), message };
-
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newPost)
-    });
-    if (!res.ok) throw new Error("Failed to post");
-    const saved = await res.json();
-    addPostToDOM(saved);
-  } catch (err) {
-    console.error("Post error:", err);
-    addPostToDOM(newPost);
+  if (error) {
+    console.error("Load error:", error);
+    return;
   }
 
-  msgInput.value = "";
-}
+  thread.innerHTML = "";
 
-postBtn.addEventListener("click", postMessage);
-msgInput.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    postMessage();
-  }
-});
-
-// Periodically refresh without changing scroll position
-loadComments();
-setInterval(loadComments, 2000);
-</script>
-
-<script>
-// Green border around layout
-const borderDiv = document.createElement('div');
-borderDiv.style.position = 'fixed';
-borderDiv.style.inset = '0';
-borderDiv.style.border = '10px solid #39FF14';
-borderDiv.style.pointerEvents = 'none';
-borderDiv.style.boxSizing = 'border-box';
-borderDiv.style.zIndex = '9999';
-document.body.appendChild(borderDiv);
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    // Get filename only
-    let filename = window.location.pathname.split("/").pop();
-
-    // Remove .html
-    filename = filename.replace(/\.html$/i, "");
-
-    // Remove everything up to and including the first underscore
-    // (treats that as the prefix)
-    filename = filename.replace(/^[^_]*_/, "");
-
-    // Convert underscores to spaces
-    const title = filename.replace(/_/g, " ");
-
-    // Replace the first <h1>
-    const h1 = document.querySelector("h1");
-    if (h1) {
-        h1.textContent = title;
+  for (const row of data) {
+    try {
+      const post = JSON.parse(row.entry);
+      renderPost(post);
+    } catch (e) {
+      console.warn("Bad row:", row.entry);
     }
-});
+  }
+}
+
+/* INIT */
+loadThread();
+setInterval(loadThread, 5000);
 </script>
-
-<script>
-(function() {
-  // Prevent pinch-to-zoom
-  function preventPinch(e) {
-    if (e.touches.length > 1) e.preventDefault();
-  }
-
-  // Prevent double-tap zoom
-  let lastTouchTime = 0;
-  function preventDoubleTap(e) {
-    const now = Date.now();
-    if (now - lastTouchTime < 300) {
-      e.preventDefault();
-    }
-    lastTouchTime = now;
-  }
-
-  // Block gesture events on iOS
-  function preventGesture(e) {
-    e.preventDefault();
-  }
-
-  document.addEventListener('touchstart', preventPinch, { passive: false });
-  document.addEventListener('touchend', preventDoubleTap, { passive: false });
-  document.addEventListener('gesturestart', preventGesture, { passive: false });
-})();
-</script>
-
 
 </body>
 </html>
